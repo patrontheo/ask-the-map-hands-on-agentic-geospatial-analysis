@@ -1,0 +1,29 @@
+{
+ "crs_projected": "EPSG:2154",
+ "currency": "EUR",
+ "incidents": [
+  {
+   "id": "flood_test",
+   "peril": "flood",
+   "name": "Test flood",
+   "date": "2024-01-01",
+   "path": "events/flood_test.geojson",
+   "source": "fixture",
+   "licence": "test"
+  },
+  {
+   "id": "wildfire_test",
+   "peril": "wildfire",
+   "name": "Test wildfire",
+   "date": "2024-07-01",
+   "path": "events/wildfire_test.geojson",
+   "source": "fixture",
+   "licence": "test"
+  }
+ ],
+ "portfolio": {
+  "sites": "portfolio/sites.csv",
+  "companies": "portfolio/companies.csv"
+ },
+ "districts": "admin/districts.geojson"
+}

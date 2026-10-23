@@ -1,0 +1,21 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+*.egg-info/
+
+# Coding assistants: local state
+.claude/settings.local.json
+.codex/
+
+# Executor outputs
+outputs/
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
