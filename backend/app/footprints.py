@@ -5,7 +5,7 @@ the model a simplified copy, labelled as such. Spatial computation tools always 
 """
 
 import os
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 
 import geopandas as gpd
 import shapely
@@ -118,11 +118,16 @@ def _plain(value):
     return value
 
 
+class FootprintNotPrepared(Exception):
+    pass
+
+
 def simplified_footprint(bundle: Bundle, incident_id: str) -> tuple[BaseGeometry, SimplificationInfo]:
     """Simplified footprint in EPSG:4326, cached per bundle.
 
     Real incidents ship a precomputed file (catalog `baseline_path`, written by prep/); generalising them
-    takes minutes. Small footprints, such as the test fixture, are handled at runtime.
+    takes minutes, so it is never done at request time. Footprints already within the budget, such as the
+    test fixture, are used as they are.
     """
     key = (id(bundle), incident_id)
     if key not in _footprints:
@@ -132,7 +137,11 @@ def simplified_footprint(bundle: Bundle, incident_id: str) -> tuple[BaseGeometry
             fields = {f: _plain(row[f]) for f in SimplificationInfo.__dataclass_fields__ if f in row.index}
             _footprints[key] = (row.geometry, SimplificationInfo(**fields))
         else:
-            projected, info = simplify_to_budget(incident_footprint(bundle, incident_id).union_projected, MAX_VERTICES)
+            full = incident_footprint(bundle, incident_id).union_projected
+            if _count(full) > MAX_VERTICES:
+                raise FootprintNotPrepared(
+                    f"{incident_id}: no simplified footprint; run prep/build_baseline_footprints.py")
+            projected, info = simplify_to_budget(full, MAX_VERTICES)
             geom_4326 = gpd.GeoSeries([projected], crs=bundle.crs_projected).to_crs("EPSG:4326").iloc[0]
             _footprints[key] = (geom_4326, info)
     return _footprints[key]
@@ -146,7 +155,3 @@ def footprint_geojson(geom: BaseGeometry) -> dict:
 
     g = mapping(geom)
     return {"type": g["type"], "coordinates": rounded(g["coordinates"])}
-
-
-def simplification_info(bundle: Bundle, incident_id: str) -> dict:
-    return asdict(simplified_footprint(bundle, incident_id)[1])

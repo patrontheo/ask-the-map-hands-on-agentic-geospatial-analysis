@@ -30,6 +30,18 @@ def test_load_incident_shows_footprint_and_gives_readable_geometry(ctx):
     assert "site_ids" not in r.data  # loading does not select anything
 
 
+def test_load_incident_without_prepared_copy_still_shows_footprint(monkeypatch):
+    from backend.app import footprints
+    from backend.app.data import load_bundle
+    from tests.conftest import FIXTURE_DIR
+
+    monkeypatch.setattr(footprints, "MAX_VERTICES", 3)  # the fixture squares become "too large"
+    r = dispatch("load_incident", {"incident_id": "flood_test"}, ToolContext(load_bundle(FIXTURE_DIR)))
+    assert r.status == "ok" and r.map_actions[0]["type"] == "show_layer"
+    assert "geometry" not in r.data["footprint_for_reading"]
+    assert "not been prepared" in r.data["footprint_for_reading"]["label"]
+
+
 def test_load_incident_unknown_id_hints_valid_ids(ctx):
     r = dispatch("load_incident", {"incident_id": "earthquake"}, ctx)
     assert r.error.code == "unknown_incident" and "flood_test" in r.error.hint
@@ -53,7 +65,11 @@ def test_zoom_map_and_hide_layer(ctx):
     r = dispatch("zoom_map", {"layer_id": "incident:wildfire_test"}, ctx)
     assert r.map_actions[0]["type"] == "fit_bounds"
     assert dispatch("zoom_map", {"site_ids": ["S01"]}, ctx).status == "ok"
+    both = dispatch("zoom_map", {"layer_id": "incident:flood_test", "site_ids": ["S08"]}, ctx)
+    flood = dispatch("zoom_map", {"layer_id": "incident:flood_test"}, ctx).map_actions[0]["bbox"]
+    assert both.status == "ok" and both.map_actions[0]["bbox"][2] > flood[2]  # extended east to the wildfire site
     assert dispatch("zoom_map", {}, ctx).error.code == "invalid_arguments"
+    assert dispatch("zoom_map", {"layer_id": None, "site_ids": []}, ctx).error.code == "invalid_arguments"
     assert dispatch("zoom_map", {"layer_id": "nope"}, ctx).error.code == "unknown_layer"
     hide = dispatch("hide_layer", {"layer_id": "sites"}, ctx)
     assert hide.map_actions == [{"type": "hide_layer", "layer_id": "sites"}]

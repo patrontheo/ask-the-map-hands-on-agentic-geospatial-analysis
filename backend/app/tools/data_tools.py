@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, model_validator
 from backend.app import analysis
 from backend.app.analysis import AnalysisError
 from backend.app.data import Bundle
-from backend.app.footprints import footprint_geojson, simplified_footprint
+from backend.app.footprints import FootprintNotPrepared, footprint_geojson, simplified_footprint
 from backend.app.layers import layer_bbox, layer_ids
 from backend.app.tools.registry import ToolContext, tool
 from backend.app.tools.result import ToolResult, table_from_df
@@ -45,9 +45,9 @@ class ZoomArgs(BaseModel):
     site_ids: list[str] | None = Field(None, description="Sites to zoom to.")
 
     @model_validator(mode="after")
-    def exactly_one(self):
-        if (self.layer_id is None) == (self.site_ids is None):
-            raise ValueError("give exactly one of layer_id or site_ids")
+    def at_least_one(self):
+        if self.layer_id is None and not self.site_ids:
+            raise ValueError("give layer_id, site_ids, or both")
         return self
 
 
@@ -109,7 +109,12 @@ footprint geometry (EPSG:4326) that you can read; the label states how much it d
 """)
 def load_incident(bundle: Bundle, args: IncidentArgs, ctx: ToolContext) -> ToolResult:
     fp = analysis.incident_footprint(bundle, args.incident_id)
-    geom, info = simplified_footprint(bundle, args.incident_id)
+    try:
+        geom, info = simplified_footprint(bundle, args.incident_id)
+        reading = {"label": info.label(), "crs": "EPSG:4326", "geometry": footprint_geojson(geom)}
+    except FootprintNotPrepared:
+        reading = {"label": "Not available: the simplified copy of this footprint has not been prepared, "
+                            "so its geometry cannot be read."}
     meta = fp.meta
     area_km2 = round(fp.union_projected.area / 1e6, 2)
     return ToolResult.ok(
@@ -118,8 +123,7 @@ def load_incident(bundle: Bundle, args: IncidentArgs, ctx: ToolContext) -> ToolR
         data={"incident_id": args.incident_id, "peril": meta.get("peril"), "name": meta.get("name"),
               "date": meta.get("date"), "source": meta.get("source"), "n_polygons": fp.n_polygons,
               "area_km2": area_km2, "bbox": fp.bbox_4326,
-              "footprint_for_reading": {"label": info.label(), "crs": "EPSG:4326",
-                                        "geometry": footprint_geojson(geom)}},
+              "footprint_for_reading": reading},
         map_actions=[{"type": "show_layer", "layer_id": f"incident:{args.incident_id}"},
                      {"type": "fit_bounds", "bbox": fp.bbox_4326}],
     )
@@ -155,15 +159,19 @@ def highlight_sites(bundle: Bundle, args: SiteIdsArgs, ctx: ToolContext) -> Tool
     )
 
 
-@tool(ZoomArgs, description="Zoom the map to a layer or to a set of sites.")
+@tool(ZoomArgs, description="Zoom the map to a layer, to a set of sites, or to both together.")
 def zoom_map(bundle: Bundle, args: ZoomArgs, ctx: ToolContext) -> ToolResult:
+    boxes, targets = [], []
     if args.layer_id is not None:
         _check_layer(bundle, args.layer_id)
-        return ToolResult.ok(f"Zoomed to {args.layer_id}.",
-                             map_actions=[{"type": "fit_bounds", "bbox": layer_bbox(bundle, args.layer_id)}])
-    analysis.check_site_ids(bundle, args.site_ids)
-    return ToolResult.ok(f"Zoomed to {len(args.site_ids)} site(s).",
-                         map_actions=[{"type": "fit_bounds", "bbox": _sites_bbox(bundle, args.site_ids)}])
+        boxes.append(layer_bbox(bundle, args.layer_id))
+        targets.append(args.layer_id)
+    if args.site_ids:
+        analysis.check_site_ids(bundle, args.site_ids)
+        boxes.append(_sites_bbox(bundle, args.site_ids))
+        targets.append(f"{len(args.site_ids)} site(s)")
+    bbox = [min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes)]
+    return ToolResult.ok(f"Zoomed to {' and '.join(targets)}.", map_actions=[{"type": "fit_bounds", "bbox": bbox}])
 
 
 @tool(LayerArgs, description="Hide a layer from the map.")

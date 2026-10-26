@@ -36,11 +36,10 @@ button { font: inherit; }
 .brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
 .slash { width: 4px; height: 30px; background: var(--axa-red); transform: skewX(-20deg); flex-shrink: 0; }
 .brand h1 { font-family: var(--serif); font-weight: 600; font-size: 24px; margin: 0; letter-spacing: 0.01em; white-space: nowrap; }
-.tagline { margin: 0; font-size: 14px; color: rgb(255 255 255 / 0.75); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 
 /* Main layout */
-.layout { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 440px; min-height: 0; }
+.layout { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) clamp(320px, 28vw, 400px); min-height: 0; }
 .map-area { position: relative; }
 #map { position: absolute; inset: 0; }
 
@@ -127,7 +126,6 @@ button { font: inherit; }
 .maplibregl-popup-content dd { margin: 0; font-variant-numeric: tabular-nums; }
 
 @media (max-width: 960px) {
-  .tagline { display: none; }
   .layout { grid-template-columns: 1fr; grid-template-rows: 45vh minmax(0, 1fr); }
   .chat { border-left: 0; border-top: 1px solid var(--line); }
 }

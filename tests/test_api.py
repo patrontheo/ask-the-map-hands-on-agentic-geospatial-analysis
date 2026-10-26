@@ -4,15 +4,19 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.app.agent import loop
+from backend.app.data import get_bundle
 from backend.app.main import app
+from tests.conftest import FIXTURE_DIR
 from tests.test_loop import item, response
 
 
 @pytest.fixture
 def client(monkeypatch):
-    monkeypatch.delenv("DATA_DIR", raising=False)
+    monkeypatch.setenv("DATA_DIR", str(FIXTURE_DIR))  # never the real bundle in data/
+    get_bundle.cache_clear()
     with TestClient(app) as c:
         yield c
+    get_bundle.cache_clear()
 
 
 @pytest.fixture
