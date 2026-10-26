@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ask the Map</title>
+  <link rel="stylesheet" href="vendor/maplibre-gl/maplibre-gl.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="slash" aria-hidden="true"></span>
+      <h1>Ask the Map</h1>
+      <p class="tagline">Spatial screening of a synthetic insurance portfolio</p>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="map-area" aria-label="Map">
+      <div id="map"></div>
+      <div id="legend" class="legend" aria-label="Map layers"></div>
+      <div id="map-notice" class="map-notice" role="status" hidden></div>
+    </section>
+
+    <section class="chat" aria-label="Chat">
+      <div id="empty-state" class="empty-state">
+        <h2>What would you like to know?</h2>
+        <p>Ask about the sites, the companies and the two incident footprints. Try one of these:</p>
+        <ul class="suggestions">
+          <li><button type="button">Which sites lie inside the flood footprint, and how many distinct sites is that?</button></li>
+          <li><button type="button">What TIV do the sites in the flood footprint represent, and which companies have the highest exposed TIV?</button></li>
+          <li><button type="button">Which company is most affected by the wildfire?</button></li>
+        </ul>
+      </div>
+
+      <ol id="messages" class="messages" aria-live="polite"></ol>
+
+      <form id="chat-form" class="composer">
+        <label for="chat-input" class="visually-hidden">Your question</label>
+        <textarea id="chat-input" rows="2" placeholder="Ask a question about the portfolio" required></textarea>
+        <button type="submit" id="send">Ask</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="vendor/maplibre-gl/maplibre-gl.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

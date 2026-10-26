@@ -3,9 +3,10 @@ from types import SimpleNamespace
 
 import pytest
 
-import backend.app.tools.core  # noqa: F401
 from backend.app.agent import loop
 from backend.app.tools.registry import ToolContext
+
+pytestmark = pytest.mark.usefixtures("registered_tools")
 
 
 def item(**kw):

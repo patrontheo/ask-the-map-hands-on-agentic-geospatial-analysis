@@ -14,11 +14,12 @@ def client() -> OpenAI:
 
 def create_response(instructions: str, items: list, tools: list[dict]):
     """One stateless Responses API call; the caller keeps the conversation items."""
+    kwargs = {"tools": tools} if tools else {}
     return client().responses.create(
         model=config.LLM_MODEL,
         instructions=instructions,
         input=items,
-        tools=tools,
         store=False,
         include=["reasoning.encrypted_content"],
+        **kwargs,
     )

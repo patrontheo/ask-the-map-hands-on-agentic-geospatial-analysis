@@ -65,13 +65,17 @@ def tool_definitions() -> list[dict]:
     return [t.definition() for t in registered_tools()]
 
 
-def dispatch(name: str, arguments: str | dict[str, Any], ctx: ToolContext) -> ToolResult:
-    """The only place where tools run. Always returns a ToolResult, never raises."""
+def dispatch(name: str, arguments: str | dict[str, Any], ctx: ToolContext,
+             allow_unregistered: bool = False) -> ToolResult:
+    """The only place where tools run. Always returns a ToolResult, never raises.
+
+    The model may only call registered tools; direct calls (allow_unregistered) can run any implemented tool.
+    """
     raw_args: dict[str, Any] = {}
     spec = TOOLS.get(name)
     try:
         raw_args = json.loads(arguments or "{}") if isinstance(arguments, str) else dict(arguments or {})
-        if spec is None or not spec.registered:
+        if spec is None or not (spec.registered or allow_unregistered):
             names = ", ".join(t.name for t in registered_tools())
             result = ToolResult.fail("unknown_tool", f"No tool named '{name}' is available.",
                                      f"Available tools: {names}.")

@@ -2,9 +2,10 @@ import json
 
 import pytest
 
-import backend.app.tools.core  # noqa: F401  registers the tools
 from backend.app.tools.registry import TOOLS, ToolContext, dispatch, tool_definitions
 from backend.app.tools.result import to_llm_payload
+
+pytestmark = pytest.mark.usefixtures("registered_tools")
 
 
 @pytest.fixture
@@ -48,6 +49,7 @@ def test_unregistered_tool_is_not_dispatchable(ctx, monkeypatch):
     monkeypatch.setattr(TOOLS["summarize_sites"], "registered", False)
     assert "summarize_sites" not in {d["name"] for d in tool_definitions()}
     assert dispatch("summarize_sites", {}, ctx).error.code == "unknown_tool"
+    assert dispatch("summarize_sites", {}, ctx, allow_unregistered=True).status == "ok"
 
 
 def test_llm_payload_has_no_map_actions(ctx):

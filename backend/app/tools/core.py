@@ -1,3 +1,6 @@
+"""Spatial tools for the agent. In step-00 they are implemented but not registered, so the chat runs
+LLM-only; describing and registering them is the step-01 exercise."""
+
 from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
@@ -33,7 +36,7 @@ class NoArgs(BaseModel):
     pass
 
 
-@tool(NoArgs, description="""
+@tool(NoArgs, registered=False, description="""
 Describe the available data: incidents (IDs, peril, date, source), portfolio columns and units,
 coordinate systems, and the screening definitions. Call this first when you do not know an incident ID.
 """)
@@ -58,7 +61,7 @@ class SelectArgs(BaseModel):
     incident_id: str = Field(description="Incident ID, as listed by describe_data.")
 
 
-@tool(SelectArgs, description="""
+@tool(SelectArgs, registered=False, description="""
 Select the portfolio sites inside an incident footprint (boundary included, each site counted once).
 Returns the distinct site IDs and their count. Use the returned result_id with summarize_sites.
 """)
@@ -88,7 +91,7 @@ class SummarizeArgs(BaseModel):
         return self
 
 
-@tool(SummarizeArgs, description="""
+@tool(SummarizeArgs, registered=False, description="""
 Count distinct sites and sum their TIV (EUR), optionally grouped by company, district or property type,
 ranked by the chosen metric. Works on a previous selection (result_id), explicit site IDs, or the whole portfolio.
 """)
@@ -120,7 +123,7 @@ class DistanceArgs(BaseModel):
     site_b: str
 
 
-@tool(DistanceArgs, description="Straight-line distance in metres between two sites, computed in the projected CRS.")
+@tool(DistanceArgs, registered=False, description="Straight-line distance in metres between two sites, computed in the projected CRS.")
 def distance_between_sites(bundle: Bundle, args: DistanceArgs, ctx: ToolContext) -> ToolResult:
     d = analysis.distance_between_sites(bundle, args.site_a, args.site_b)
     return ToolResult.ok(

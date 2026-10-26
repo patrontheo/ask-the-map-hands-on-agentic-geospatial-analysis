@@ -19,6 +19,7 @@ class Incident:
     id: str
     meta: dict
     polygons: gpd.GeoDataFrame  # EPSG:4326
+    baseline: gpd.GeoDataFrame | None = None  # precomputed simplified footprint for the LLM-only baseline
 
 
 @dataclass(frozen=True)
@@ -53,7 +54,7 @@ def load_bundle(data_dir: Path) -> Bundle:
         polygons = polygons[polygons.geometry.notna() & ~polygons.geometry.is_empty]
         if polygons.empty:
             raise DataError(f"incident {meta['id']} has no polygons")
-        incidents[meta["id"]] = Incident(meta["id"], meta, polygons)
+        incidents[meta["id"]] = Incident(meta["id"], meta, polygons, _optional(data_dir, meta.get("baseline_path")))
 
     _validate(sites, companies, districts)
     return Bundle(
@@ -91,6 +92,17 @@ def _validate(sites, companies, districts):
         raise DataError("; ".join(problems))
 
 
+FIXTURE_DIR = REPO_ROOT / "tests" / "fixtures" / "bundle"
+
+
+def data_dir() -> Path:
+    # Until the real bundle is frozen, fall back to the test fixture so the app runs.
+    if "DATA_DIR" in os.environ:
+        return Path(os.environ["DATA_DIR"])
+    real = REPO_ROOT / "data"
+    return real if (real / "catalog.json").exists() else FIXTURE_DIR
+
+
 @lru_cache(maxsize=1)
 def get_bundle() -> Bundle:
-    return load_bundle(Path(os.environ.get("DATA_DIR", REPO_ROOT / "data")))
+    return load_bundle(data_dir())

@@ -12,6 +12,9 @@ __pycache__/
 .claude/settings.local.json
 .codex/
 
+# Original downloads (organiser-only, large); the processed bundle lives in data/
+prep/raw/
+
 # Executor outputs
 outputs/
 
