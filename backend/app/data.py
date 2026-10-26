@@ -19,7 +19,7 @@ class Incident:
     id: str
     meta: dict
     polygons: gpd.GeoDataFrame  # EPSG:4326
-    baseline: gpd.GeoDataFrame | None = None  # precomputed simplified footprint for the LLM-only baseline
+    baseline: gpd.GeoDataFrame | None = None  # precomputed simplified footprint for the model to read
 
 
 @dataclass(frozen=True)

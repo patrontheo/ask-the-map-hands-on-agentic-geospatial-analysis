@@ -49,11 +49,23 @@ class Distance:
     method: str = "straight line in projected CRS"
 
 
+_footprints: dict[tuple[int, str], Footprint] = {}
+
+
 def incident_footprint(bundle: Bundle, incident_id: str) -> Footprint:
+    """Union of the incident's polygons in the projected CRS; cached because real footprints take seconds."""
     incident = bundle.incidents.get(incident_id)
     if incident is None:
         raise AnalysisError("unknown_incident", f"Unknown incident_id '{incident_id}'.",
                             f"Valid incident_id values: {', '.join(sorted(bundle.incidents))}.")
+    key = (id(bundle), incident_id)
+    if key not in _footprints:
+        _footprints[key] = _build_footprint(bundle, incident)
+    return _footprints[key]
+
+
+def _build_footprint(bundle: Bundle, incident) -> Footprint:
+    incident_id = incident.id
     projected = incident.polygons.geometry.to_crs(bundle.crs_projected).map(make_valid)
     return Footprint(
         incident_id=incident_id,
@@ -78,7 +90,7 @@ def select_sites_in_incident(bundle: Bundle, incident_id: str) -> Selection:
     })
 
 
-def _check_site_ids(bundle: Bundle, site_ids: list[str]) -> None:
+def check_site_ids(bundle: Bundle, site_ids: list[str]) -> None:
     unknown = [s for s in site_ids if s not in bundle.sites.index]
     if unknown:
         raise AnalysisError("unknown_site_ids", f"{len(unknown)} unknown site_id(s).",
@@ -91,7 +103,7 @@ def summarize_sites(bundle: Bundle, site_ids: list[str] | None, group_by: GroupB
         distinct = list(bundle.sites.index)
         n_input = len(distinct)
     else:
-        _check_site_ids(bundle, site_ids)
+        check_site_ids(bundle, site_ids)
         distinct = list(dict.fromkeys(site_ids))
         n_input = len(site_ids)
 
@@ -129,6 +141,6 @@ def _group_names(bundle: Bundle, group_by: GroupBy) -> dict:
 
 
 def distance_between_sites(bundle: Bundle, site_a: str, site_b: str) -> Distance:
-    _check_site_ids(bundle, [site_a, site_b])
+    check_site_ids(bundle, [site_a, site_b])
     d = bundle.sites_projected[site_a].distance(bundle.sites_projected[site_b])
     return Distance(round(float(d), 1), bundle.crs_projected)

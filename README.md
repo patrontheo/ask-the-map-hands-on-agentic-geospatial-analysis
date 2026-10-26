@@ -23,7 +23,7 @@ Open http://localhost:8000.
 
 | Branch | Stage |
 |--------|-------|
-| `step-00-starter` (= `main`) | Map, data, LLM-only baseline, agent loop |
+| `step-00-starter` (= `main`) | Map, chat, tool framework with data-loading and map tools |
 | `step-01-tools` | Fixed tools connected |
 | `step-02-trace` | Trace pane |
 | `step-03-analysis` | Generated analysis and charts (stretch) |

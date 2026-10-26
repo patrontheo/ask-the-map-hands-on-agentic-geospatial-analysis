@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # run by path: mak
 
 import geopandas as gpd
 
-from backend.app.agent.baseline import MAX_VERTICES, footprint_geojson, simplify_to_budget
+from backend.app.footprints import MAX_VERTICES, footprint_geojson, simplify_to_budget
 from backend.app.analysis import incident_footprint
 from backend.app.data import REPO_ROOT, load_bundle
 

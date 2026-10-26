@@ -31,7 +31,7 @@ export function initChat({ getSessionId }) {
       const msg = addMessage("assistant", renderMarkdown(response.reply));
       msg.append(renderResults(response.results));
       try {
-        for (const result of response.results) applyMapActions(result.map_actions);
+        for (const result of response.results) await applyMapActions(result.map_actions);
       } catch (mapErr) {
         console.warn("map action failed", mapErr);
       }

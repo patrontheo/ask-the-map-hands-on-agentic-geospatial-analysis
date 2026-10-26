@@ -1,13 +1,11 @@
-"""LLM-only baseline: the same data and definitions as the tool path, put in the prompt, with no tools.
+"""Simplified incident footprints for the model to read.
 
-Real footprints are far too large for a prompt, so the baseline gets a simplified footprint, labelled as
-such. The tools always use the full footprint.
+Real footprints are far too large to put in a model's context (~1M and ~6M tokens), so load_incident gives
+the model a simplified copy, labelled as such. Spatial computation tools always use the full footprint.
 """
 
-import json
 import os
 from dataclasses import asdict, dataclass
-from pathlib import Path
 
 import geopandas as gpd
 import shapely
@@ -16,11 +14,7 @@ from shapely.geometry.base import BaseGeometry
 
 from backend.app.analysis import incident_footprint
 from backend.app.data import Bundle
-from backend.app.tools.core import DEFINITIONS
 
-PROMPT = (Path(__file__).parent / "prompts" / "baseline.md").read_text()
-SITE_COLUMNS = ["site_id", "company_id", "address", "postcode", "city", "district_code", "district_name",
-                "property_type", "lon", "lat", "tiv_building_eur", "tiv_contents_eur", "tiv_eur"]
 MAX_VERTICES = int(os.environ.get("BASELINE_MAX_VERTICES", "3000"))
 COORD_DECIMALS = 5  # about 1 m in EPSG:4326
 
@@ -42,7 +36,7 @@ class SimplificationInfo:
     def label(self) -> str:
         if not self.simplified:
             return "Full footprint (small enough to include unchanged)."
-        text = (f"SIMPLIFIED footprint, not the one the tools use: gaps up to {2 * self.closing_m:g} m closed, "
+        text = (f"SIMPLIFIED copy of the footprint, not the full geometry that spatial computation tools use: gaps up to {2 * self.closing_m:g} m closed, "
                 f"parts under {self.min_part_m2:,.0f} m² dropped, edges simplified with a {self.tolerance_m:g} m "
                 f"tolerance; {self.vertices:,} of {self.vertices_original:,} vertices and {self.parts_kept:,} of "
                 f"{self.parts_original:,} polygon parts remain; {self.area_differs_pct:.1f} % of the area differs "
@@ -124,7 +118,7 @@ def _plain(value):
     return value
 
 
-def baseline_footprint(bundle: Bundle, incident_id: str) -> tuple[BaseGeometry, SimplificationInfo]:
+def simplified_footprint(bundle: Bundle, incident_id: str) -> tuple[BaseGeometry, SimplificationInfo]:
     """Simplified footprint in EPSG:4326, cached per bundle.
 
     Real incidents ship a precomputed file (catalog `baseline_path`, written by prep/); generalising them
@@ -154,35 +148,5 @@ def footprint_geojson(geom: BaseGeometry) -> dict:
     return {"type": g["type"], "coordinates": rounded(g["coordinates"])}
 
 
-_instructions: dict[int, str] = {}
-
-
-def baseline_instructions(bundle: Bundle) -> str:
-    if id(bundle) not in _instructions:
-        _instructions[id(bundle)] = _build(bundle)
-    return _instructions[id(bundle)]
-
-
-def baseline_footprint_info(bundle: Bundle) -> dict[str, dict]:
-    return {i: asdict(baseline_footprint(bundle, i)[1]) for i in bundle.incidents}
-
-
-def _build(bundle: Bundle) -> str:
-    sites = bundle.sites[SITE_COLUMNS].to_csv(index=False)
-    companies = bundle.companies[["company_id", "company_name"]].to_csv(index=False)
-    footprints = []
-    for incident in bundle.incidents.values():
-        geom, info = baseline_footprint(bundle, incident.id)
-        geojson = json.dumps(footprint_geojson(geom), separators=(",", ":"))
-        footprints.append(f"### Incident `{incident.id}` ({incident.meta.get('peril')}, "
-                          f"{incident.meta.get('name')}, {incident.meta.get('date')})\n"
-                          f"{info.label()}\nGeoJSON geometry, EPSG:4326 (lon, lat):\n{geojson}")
-    definitions = "\n".join(f"- **{k}**: {v}" for k, v in DEFINITIONS.items())
-    return "\n\n".join([
-        PROMPT,
-        f"## Definitions\n{definitions}\n- Coordinates are EPSG:4326; metric work is defined in "
-        f"{bundle.crs_projected}.",
-        f"## Sites ({len(bundle.sites)} rows, CSV)\n{sites}",
-        f"## Companies (CSV)\n{companies}",
-        "## Incident footprints\n" + "\n\n".join(footprints),
-    ])
+def simplification_info(bundle: Bundle, incident_id: str) -> dict:
+    return asdict(simplified_footprint(bundle, incident_id)[1])

@@ -45,6 +45,10 @@ class ToolResult(BaseModel):
         return cls(status="error", summary=message, error=ToolErrorInfo(code=code, message=message, hint=hint))
 
 
+def eur_m(value: float) -> str:
+    return f"EUR {value / 1e6:,.1f}M"
+
+
 def table_from_df(df: pd.DataFrame, id_field: str | None = None, units: dict[str, str] | None = None) -> Table:
     units = units or {}
 

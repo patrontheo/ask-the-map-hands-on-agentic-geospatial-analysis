@@ -2,8 +2,7 @@ import json
 
 from shapely.geometry import MultiPolygon, Point
 
-from backend.app.agent.baseline import (baseline_footprint, baseline_instructions, footprint_geojson,
-                                        simplify_to_budget)
+from backend.app.footprints import footprint_geojson, simplified_footprint, simplify_to_budget
 
 
 def test_small_geometry_is_left_unchanged():
@@ -39,11 +38,9 @@ def test_sites_differ_appears_in_label():
     assert "3 of 100 portfolio sites" in info.label()
 
 
-def test_fixture_baseline_prompt_labels_footprints(bundle):
-    _, info = baseline_footprint(bundle, "flood_test")
-    assert not info.simplified
-    text = baseline_instructions(bundle)
-    assert text.count("Full footprint") == 2
+def test_small_fixture_footprint_is_unchanged(bundle):
+    _, info = simplified_footprint(bundle, "flood_test")
+    assert not info.simplified and "Full footprint" in info.label()
 
 
 def test_precomputed_baseline_footprint_is_used(tmp_path):
@@ -65,7 +62,7 @@ def test_precomputed_baseline_footprint_is_used(tmp_path):
     (data / "catalog.json").write_text(json.dumps(catalog))
 
     bundle = load_bundle(data)
-    geom, info = baseline_footprint(bundle, "flood_test")
+    geom, info = simplified_footprint(bundle, "flood_test")
     assert info.vertices_original == 9999 and type(info.vertices_original) is int
     assert "4.2 % of the area differs" in info.label()
     assert "2 of 13 portfolio sites" in info.label()
@@ -86,11 +83,11 @@ def test_prep_script_writes_files_and_catalog(tmp_path):
     assert report["flood_test"]["sites_differ"] == 0 and report["flood_test"]["sites_total"] == 13
     bundle = load_bundle(data)
     assert bundle.incidents["flood_test"].baseline is not None
-    assert "Full footprint" in baseline_footprint(bundle, "flood_test")[1].label()
+    assert "Full footprint" in simplified_footprint(bundle, "flood_test")[1].label()
 
 
 def test_geojson_coordinates_are_rounded(bundle):
-    geom, _ = baseline_footprint(bundle, "flood_test")
+    geom, _ = simplified_footprint(bundle, "flood_test")
     g = footprint_geojson(geom)
     lon = g["coordinates"][0][0][0] if g["type"] == "Polygon" else g["coordinates"][0][0][0][0]
     assert len(json.dumps(lon).split(".")[1]) <= 5

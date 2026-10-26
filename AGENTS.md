@@ -18,7 +18,8 @@ Credentials live in `.env` (copy `.env.example`). Never print, log, or commit th
 ## How the app is organised
 
 - `backend/app/analysis.py`: the spatial functions. Pure, tested. Do not change their results.
-- `backend/app/tools/`: tool wrappers. Every tool returns a `ToolResult` built with the helpers in `result.py`; register tools with `@tool` in `registry.py`. The description and argument schema are what the model sees.
+- `backend/app/tools/`: tool wrappers. `data_tools.py` loads data and drives the map; `spatial.py` wraps the computations in `analysis.py`. Every tool returns a `ToolResult` built with the helpers in `result.py`; declare tools with `@tool` in `registry.py` (`registered=False` hides a tool from the model). The description and argument schema are what the model sees.
+- Tools never send geometry to the map; they return map actions (`show_layer`, `highlight_sites`, `fit_bounds`, …) and the frontend fetches layers from `/api/layers/{id}`.
 - `backend/app/agent/`: the Responses API client and the bounded tool loop. It emits trace events; the model never produces tool results.
 - `frontend/`: vanilla JS ES modules served by FastAPI. No build step. No new dependencies unless vendored into `frontend/vendor/`.
 - `data/`: static data bundle, loaded through `data/catalog.json`. Never hard-code paths or refetch data.

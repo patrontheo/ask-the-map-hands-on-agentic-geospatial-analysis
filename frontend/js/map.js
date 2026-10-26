@@ -15,12 +15,17 @@ const STYLE = {
     { id: "osm", type: "raster", source: "osm", paint: { "raster-saturation": -0.6, "raster-opacity": 0.9 } },
   ],
 };
+// Drawing order, bottom to top. Layers are added only when a tool shows them.
+const RANK = { districts: 1, buildings: 2, parcels: 2, incident: 3, simplified_footprint: 4, sites: 5, line: 6 };
 
 let map;
-let ready = false;
+let ready;
+const catalog = new Map(); // layer_id -> metadata from /api/layers
+const added = new Map(); // layer_id -> { rank, mapLayerIds }
+const legendBoxes = new Map(); // layer_id -> checkbox
 let sitesById = new Map();
 
-export async function initMap(container) {
+export function initMap(container) {
   map = new maplibregl.Map({
     container,
     style: STYLE,
@@ -30,20 +35,14 @@ export async function initMap(container) {
   });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
   map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-right");
+  // MapLibre only re-measures on window resize; the grid layout can change the container size without one.
+  new ResizeObserver(() => map.resize()).observe(map.getContainer());
   watchBasemap();
-
-  await new Promise((resolve) => map.on("load", resolve));
-  const layers = await api.layers();
-  const data = Object.fromEntries(await Promise.all(layers.map(async (l) => [l.id, await api.layer(l.url)])));
-
-  addDistricts(data.districts);
-  for (const layer of layers.filter((l) => l.kind === "incident")) addIncident(layer, data[layer.id]);
-  for (const layer of layers.filter((l) => l.kind === "baseline_footprint")) addBaselineFootprint(layer, data[layer.id]);
-  addSites(data.sites);
-  addHighlightAndLine();
-  buildLegend(layers);
-  fitTo(data.sites);
-  ready = true;
+  ready = (async () => {
+    await new Promise((resolve) => map.on("load", resolve));
+    for (const layer of await api.layers()) catalog.set(layer.id, layer);
+  })();
+  return ready;
 }
 
 function watchBasemap() {
@@ -61,46 +60,99 @@ function perilColor(peril) {
   return COLORS[peril] ?? COLORS.other;
 }
 
-function addDistricts(geojson) {
-  map.addSource("districts", { type: "geojson", data: geojson });
-  map.addLayer({ id: "districts-line", type: "line", source: "districts",
-    paint: { "line-color": COLORS.district, "line-width": 1, "line-opacity": 0.7, "line-dasharray": [4, 3] } });
+function beforeId(rank) {
+  const above = [...added.values()].filter((l) => l.rank > rank).sort((a, b) => a.rank - b.rank)[0];
+  return above?.mapLayerIds[0];
 }
 
-function addIncident(layer, geojson) {
-  const color = perilColor(layer.peril);
-  map.addSource(layer.id, { type: "geojson", data: geojson });
-  map.addLayer({ id: `${layer.id}-fill`, type: "fill", source: layer.id, paint: { "fill-color": color, "fill-opacity": 0.3 } });
-  map.addLayer({ id: `${layer.id}-line`, type: "line", source: layer.id, paint: { "line-color": color, "line-width": 1.2 } });
+function addMapLayers(layerId, rank, geojson, specs) {
+  map.addSource(layerId, { type: "geojson", data: geojson });
+  const before = beforeId(rank);
+  for (const spec of specs) map.addLayer({ ...spec, source: layerId }, before);
+  added.set(layerId, { rank, mapLayerIds: specs.map((s) => s.id) });
 }
 
-function addBaselineFootprint(layer, geojson) {
-  map.addSource(layer.id, { type: "geojson", data: geojson });
-  map.addLayer({ id: `${layer.id}-line`, type: "line", source: layer.id, layout: { visibility: "none" },
-    paint: { "line-color": COLORS.brand, "line-width": 2, "line-dasharray": [2, 1.5] } });
-}
+async function ensureLayer(layerId) {
+  if (added.has(layerId)) return;
+  const meta = catalog.get(layerId);
+  if (!meta) throw new Error(`Unknown layer ${layerId}`);
+  const geojson = await api.layer(meta.url);
+  if (added.has(layerId)) return; // added meanwhile by a concurrent action
+  const rank = RANK[meta.kind] ?? 2;
 
-function addSites(geojson) {
-  sitesById = new Map(geojson.features.map((f) => [f.properties.site_id, f]));
-  map.addSource("sites", { type: "geojson", data: geojson });
-  map.addLayer({ id: "sites", type: "circle", source: "sites",
-    paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 3.5, 14, 6.5],
-      "circle-color": COLORS.site, "circle-stroke-color": "#fff", "circle-stroke-width": 1.5 } });
-  for (const id of ["sites"]) {
-    map.on("click", id, (e) => showSitePopup(e.features[0]));
-    map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; });
-    map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; });
+  if (meta.kind === "sites") {
+    sitesById = new Map(geojson.features.map((f) => [f.properties.site_id, f]));
+    const radius = (lo, hi) => ["interpolate", ["linear"], ["zoom"], 8, lo, 14, hi];
+    addMapLayers(layerId, rank, geojson, [
+      { id: "sites", type: "circle",
+        paint: { "circle-radius": radius(3.5, 6.5), "circle-color": COLORS.site, "circle-stroke-color": "#fff", "circle-stroke-width": 1.5 } },
+      { id: "sites-highlight", type: "circle", filter: ["in", ["get", "site_id"], ["literal", []]],
+        paint: { "circle-radius": radius(5.5, 9), "circle-color": COLORS.selected, "circle-stroke-color": "#fff", "circle-stroke-width": 2 } },
+    ]);
+    for (const id of ["sites", "sites-highlight"]) {
+      map.on("click", id, (e) => showSitePopup(e.features[0]));
+      map.on("mouseenter", id, () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", id, () => { map.getCanvas().style.cursor = ""; });
+    }
+    addLegendEntry(layerId, "Portfolio sites", { color: COLORS.site, shape: "dot" });
+  } else if (meta.kind === "incident") {
+    const color = perilColor(meta.peril);
+    addMapLayers(layerId, rank, geojson, [
+      { id: `${layerId}-fill`, type: "fill", paint: { "fill-color": color, "fill-opacity": 0.3 } },
+      { id: `${layerId}-line`, type: "line", paint: { "line-color": color, "line-width": 1.2 } },
+    ]);
+    addLegendEntry(layerId, meta.name, { color });
+    addLegendEntry(`simplified:${meta.incident_id}`, "Simplified copy read by the model",
+      { shape: "outline", checked: false, indent: true, rank: rank - 0.5 });
+  } else if (meta.kind === "simplified_footprint") {
+    addMapLayers(layerId, rank, geojson, [
+      { id: `${layerId}-line`, type: "line", paint: { "line-color": COLORS.brand, "line-width": 2, "line-dasharray": [2, 1.5] } },
+    ]);
+  } else if (meta.kind === "districts") {
+    addMapLayers(layerId, rank, geojson, [
+      { id: "districts-line", type: "line",
+        paint: { "line-color": COLORS.district, "line-width": 1, "line-opacity": 0.7, "line-dasharray": [4, 3] } },
+    ]);
+    addLegendEntry(layerId, "Districts", { color: "transparent" });
+  } else {
+    addMapLayers(layerId, rank, geojson, [
+      { id: `${layerId}-fill`, type: "fill", paint: { "fill-color": COLORS.brand, "fill-opacity": 0.15 } },
+    ]);
+    addLegendEntry(layerId, meta.name, { color: COLORS.brand });
   }
 }
 
-function addHighlightAndLine() {
-  map.addLayer({ id: "sites-highlight", type: "circle", source: "sites", filter: ["in", ["get", "site_id"], ["literal", []]],
-    paint: { "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 5.5, 14, 9],
-      "circle-color": COLORS.selected, "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });
-  map.addSource("line", { type: "geojson", data: emptyCollection() });
-  map.addLayer({ id: "line", type: "line", source: "line",
-    paint: { "line-color": COLORS.brand, "line-width": 2.5, "line-dasharray": [2, 1] } });
-  map.on("click", "sites-highlight", (e) => showSitePopup(e.features[0]));
+function setVisible(layerId, visible) {
+  const layer = added.get(layerId);
+  if (layer) for (const id of layer.mapLayerIds) map.setLayoutProperty(id, "visibility", visible ? "visible" : "none");
+  const box = legendBoxes.get(layerId);
+  if (box) box.checked = visible;
+}
+
+async function showLayer(layerId) {
+  await ensureLayer(layerId);
+  setVisible(layerId, true);
+}
+
+function addLegendEntry(layerId, text, { color, shape, checked = true, indent = false, rank }) {
+  if (legendBoxes.has(layerId)) return;
+  const label = document.createElement("label");
+  if (indent) label.classList.add("sub");
+  const box = Object.assign(document.createElement("input"), { type: "checkbox", checked });
+  box.addEventListener("change", () => (box.checked ? showLayer(layerId) : setVisible(layerId, false)));
+  const swatch = document.createElement("span");
+  swatch.className = `swatch${shape ? ` ${shape}` : ""}`;
+  if (color === "transparent") swatch.style.border = `1px dashed ${COLORS.district}`;
+  else if (color) swatch.style.background = color;
+  label.append(box, swatch, document.createTextNode(text));
+  legendBoxes.set(layerId, box);
+
+  // Keep the legend in drawing order, top layer first.
+  const legend = document.getElementById("legend");
+  const order = rank ?? RANK[catalog.get(layerId)?.kind] ?? 2;
+  label.dataset.rank = order;
+  const after = [...legend.children].find((el) => Number(el.dataset.rank) < order);
+  legend.insertBefore(label, after ?? null);
 }
 
 function showSitePopup(feature) {
@@ -112,70 +164,38 @@ function showSitePopup(feature) {
   new maplibregl.Popup({ offset: 10, maxWidth: "300px" }).setLngLat(feature.geometry.coordinates).setHTML(html).addTo(map);
 }
 
-function buildLegend(layers) {
-  const legend = document.getElementById("legend");
-  const groups = [
-    [
-      { label: "Portfolio sites", ids: ["sites"], color: COLORS.site, shape: "dot" },
-      { label: "Selected sites", ids: ["sites-highlight"], color: COLORS.selected, shape: "dot" },
-    ],
-    layers.filter((l) => l.kind === "incident").map((l) => ({
-      label: l.name, ids: [`${l.id}-fill`, `${l.id}-line`], color: perilColor(l.peril),
-    })),
-    [
-      ...layers.filter((l) => l.kind === "baseline_footprint").map((l) => ({
-        label: `What the model sees: ${l.incident_id}`, ids: [`${l.id}-line`], shape: "outline", off: true,
-        title: l.simplification?.simplified ? "Simplified footprint given to the model in its prompt" : "Unchanged footprint",
-      })),
-      { label: "Districts", ids: ["districts-line"], color: "transparent" },
-    ],
-  ];
-  groups.filter((g) => g.length).forEach((group, i) => {
-    if (i > 0) legend.append(Object.assign(document.createElement("div"), { className: "group-gap" }));
-    for (const entry of group) legend.append(legendEntry(entry));
-  });
+function ensureLine() {
+  if (added.has("line")) return;
+  addMapLayers("line", RANK.line, emptyCollection(), [
+    { id: "line", type: "line", paint: { "line-color": COLORS.brand, "line-width": 2.5, "line-dasharray": [2, 1] } },
+  ]);
 }
 
-function legendEntry(entry) {
-  const label = document.createElement("label");
-  if (entry.title) label.title = entry.title;
-  const box = Object.assign(document.createElement("input"), { type: "checkbox", checked: !entry.off });
-  box.addEventListener("change", () => {
-    for (const id of entry.ids) map.setLayoutProperty(id, "visibility", box.checked ? "visible" : "none");
-  });
-  const swatch = document.createElement("span");
-  swatch.className = `swatch${entry.shape ? ` ${entry.shape}` : ""}`;
-  if (entry.color === "transparent") swatch.style.border = `1px dashed ${COLORS.district}`;
-  else if (entry.color) swatch.style.background = entry.color;
-  label.append(box, swatch, document.createTextNode(entry.label));
-  return label;
-}
-
-export function applyMapActions(actions = []) {
-  if (!ready) return;
+// Applies a tool result's map actions in order. Tools decide what is shown; the map never shows data by itself.
+export async function applyMapActions(actions = []) {
+  await ready;
   for (const action of actions) {
-    if (action.type === "highlight_sites") {
+    if (action.type === "show_layer") {
+      await showLayer(action.layer_id);
+    } else if (action.type === "hide_layer") {
+      setVisible(action.layer_id, false);
+    } else if (action.type === "highlight_sites") {
+      await showLayer("sites");
       map.setFilter("sites-highlight", ["in", ["get", "site_id"], ["literal", action.site_ids]]);
     } else if (action.type === "clear_highlight") {
-      map.setFilter("sites-highlight", ["in", ["get", "site_id"], ["literal", []]]);
+      if (added.has("sites")) map.setFilter("sites-highlight", ["in", ["get", "site_id"], ["literal", []]]);
     } else if (action.type === "fit_bounds") {
       const [w, s, e, n] = action.bbox;
       map.fitBounds([[w, s], [e, n]], { padding: 60, maxZoom: 15 });
     } else if (action.type === "draw_line") {
+      await showLayer("sites");
       const a = sitesById.get(action.site_a), b = sitesById.get(action.site_b);
       if (!a || !b) continue;
+      ensureLine();
       map.getSource("line").setData({ type: "FeatureCollection", features: [{ type: "Feature", properties: {},
         geometry: { type: "LineString", coordinates: [a.geometry.coordinates, b.geometry.coordinates] } }] });
     }
   }
-}
-
-function fitTo(geojson) {
-  const coords = geojson.features.map((f) => f.geometry.coordinates);
-  if (!coords.length) return;
-  const lons = coords.map((c) => c[0]), lats = coords.map((c) => c[1]);
-  map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]],
-    { padding: 80, maxZoom: 14, duration: 0 });
 }
 
 function emptyCollection() {

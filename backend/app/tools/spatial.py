@@ -1,5 +1,5 @@
-"""Spatial tools for the agent. In step-00 they are implemented but not registered, so the chat runs
-LLM-only; describing and registering them is the step-01 exercise."""
+"""Spatial computation tools. In step-00 they are implemented but not registered; describing and
+registering them is the step-01 exercise."""
 
 from typing import Literal
 
@@ -9,52 +9,7 @@ from backend.app import analysis
 from backend.app.analysis import AnalysisError
 from backend.app.data import Bundle
 from backend.app.tools.registry import ToolContext, tool
-from backend.app.tools.result import ToolResult, table_from_df
-
-DEFINITIONS = {
-    "inclusion": "A site is in an incident footprint if the footprint covers its address point, "
-                 "boundary included. Footprint polygons of one incident are unioned, so each site counts once.",
-    "tiv_eur": "Total insured value of a site = building + contents, in EUR. Business interruption is excluded.",
-    "exposed_tiv": "Sum of tiv_eur over the distinct sites in the footprint. This is a screening measure: "
-                   "it is not damage, loss, or an insurance payout.",
-    "data": "Footprints are real (Copernicus EMS). Sites, companies and insured values are synthetic.",
-}
-
-SITE_COLUMNS = {
-    "site_id": "unique site ID", "company_id": "owning company", "address": "street address",
-    "district_code": "district", "property_type": "property type", "lon": "longitude (EPSG:4326)",
-    "lat": "latitude (EPSG:4326)", "tiv_building_eur": "building TIV (EUR)",
-    "tiv_contents_eur": "contents TIV (EUR)", "tiv_eur": "site TIV = building + contents (EUR)",
-}
-
-
-def eur_m(value: float) -> str:
-    return f"EUR {value / 1e6:,.1f}M"
-
-
-class NoArgs(BaseModel):
-    pass
-
-
-@tool(NoArgs, registered=False, description="""
-Describe the available data: incidents (IDs, peril, date, source), portfolio columns and units,
-coordinate systems, and the screening definitions. Call this first when you do not know an incident ID.
-""")
-def describe_data(bundle: Bundle, args: NoArgs, ctx: ToolContext) -> ToolResult:
-    incidents = [{k: m.get(k) for k in ("id", "peril", "name", "date", "source")} for m in bundle.catalog["incidents"]]
-    data = {
-        "incidents": incidents,
-        "portfolio": {"n_sites": len(bundle.sites), "n_companies": len(bundle.companies),
-                      "columns": SITE_COLUMNS, "currency": "EUR",
-                      "property_types": sorted(bundle.sites.property_type.unique())},
-        "districts": {"n_districts": len(bundle.districts)},
-        "crs": {"storage": "EPSG:4326", "metric": bundle.crs_projected},
-        "definitions": DEFINITIONS,
-    }
-    ids = ", ".join(i["id"] for i in incidents)
-    return ToolResult.ok(
-        f"{len(bundle.sites)} sites of {len(bundle.companies)} companies; incidents: {ids}. "
-        "Exposed TIV is a screening measure, not a loss.", data=data)
+from backend.app.tools.result import ToolResult, eur_m, table_from_df
 
 
 class SelectArgs(BaseModel):

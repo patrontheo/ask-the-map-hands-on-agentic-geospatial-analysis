@@ -20,11 +20,11 @@ class TurnResult:
 
 
 def run_turn(message: str, ctx: ToolContext, history: list, turn_id: str,
-             tools: list[dict] | None = None, instructions: str = SYSTEM_PROMPT, mode: str = "tools") -> TurnResult:
+             tools: list[dict] | None = None) -> TurnResult:
     """Bounded tool loop: the model asks, the dispatcher executes, results go back, until a text answer."""
     tools = tool_definitions() if tools is None else tools
     trace = Trace(turn_id)
-    trace.emit("user_message", {"text": message, "mode": mode})
+    trace.emit("user_message", {"text": message})
     items = [*history, {"role": "user", "content": message}]
     results: list[ToolResult] = []
 
@@ -33,7 +33,7 @@ def run_turn(message: str, ctx: ToolContext, history: list, turn_id: str,
                                    "tools": [t["name"] for t in tools]})
         try:
             with Timer() as t:
-                response = llm_client.create_response(instructions, items, tools)
+                response = llm_client.create_response(SYSTEM_PROMPT, items, tools)
         except Exception as e:
             trace.emit("error", {"where": "model", "message": f"{type(e).__name__}: {e}"})
             return TurnResult("The model request failed; see the trace for details.", results, trace.events, items)
