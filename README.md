@@ -51,7 +51,7 @@ only needed when developing the frontend).
 |------|-------|
 | 0 (`main`) | Map, chat, tool framework with data access and map controls |
 | 1 | Atomic tools built and composed by the agent |
-| 2 | Trace pane |
+| 2 | [Trace pane](exercises/step-02/README.md) |
 | 3 | Generated analysis and charts (stretch) |
 
 `main` is the Step 0 starter. Checkpoint branches for the later steps are not published yet.
