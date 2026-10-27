@@ -12,6 +12,7 @@ function element(tagName = "div") {
     },
     remove() { this.parent.children = this.parent.children.filter((child) => child !== this); },
     addEventListener(name, callback) { this.listeners.set(name, callback); },
+    setAttribute(name, value) { (this.attributes ??= new Map()).set(name, value); },
     focus() {},
   };
 }

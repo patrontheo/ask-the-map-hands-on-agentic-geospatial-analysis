@@ -2,6 +2,7 @@ import { api } from "./api.js";
 import { escapeHtml, renderMarkdown } from "./format.js";
 import { applyMapActions } from "./map.js";
 import { PROMPT_GROUPS } from "./prompts.js";
+import { createTraceButton } from "./trace.js";
 
 export function initChat({ getSessionId }) {
   const form = document.getElementById("chat-form");
@@ -33,12 +34,15 @@ export function initChat({ getSessionId }) {
       pending.remove();
       const msg = addMessage("assistant", renderMarkdown(response.reply));
       msg.append(renderFollowUps(response.results, ask));
+      msg.append(createTraceButton(message, response));
+      const list = document.getElementById("messages");
+      list.scrollTop = list.scrollHeight;
       try {
         for (const result of response.results) await applyMapActions(result.map_actions);
       } catch (mapErr) {
         console.warn("map action failed", mapErr);
       }
-      // Hook for the trace pane (step-02): every turn's response, including its recorded trace events.
+      // Full turn data remains available to other UI extensions.
       window.dispatchEvent(new CustomEvent("chat:turn", { detail: { message, response } }));
       console.debug("trace", response.trace);
     } catch (err) {

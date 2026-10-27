@@ -36,7 +36,7 @@ def run_turn(message: str, ctx: ToolContext, history: list, turn_id: str,
             with Timer() as t:
                 response = llm_client.create_response(SYSTEM_PROMPT, items, tools)
         except Exception as e:
-            trace.emit("error", {"where": "model", "message": f"{type(e).__name__}: {e}"})
+            trace.emit("error", {"where": "model", "message": f"{type(e).__name__}: {e}"}, t.ms)
             return TurnResult("The model request failed; see the trace for details.", results, trace.events, items)
 
         calls = [o for o in response.output if o.type == "function_call"]

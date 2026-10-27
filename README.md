@@ -6,8 +6,8 @@ You will build a natural-language spatial analyst that screens a synthetic
 insurance portfolio against a real wildfire footprint, build reusable
 tools for the agent to compose, and make its execution visible in a trace pane.
 
-This branch, `step-01-tools`, contains the completed calculation tools from Step 1.
-`main` remains the Step 0 starter. The trace pane is the next exercise (Step 2).
+This branch, `step-02-trace`, contains the calculation tools and the completed Step 2
+trace viewer. `main` remains the Step 0 starter; `step-01-tools` contains the calculation tools.
 
 ## Setup
 
@@ -39,7 +39,8 @@ keeps the camera unchanged. Zooming is an explicit operation.
 
 A site is affected when any of its buildings intersects the wildfire footprint,
 even if its map pinpoint is outside. Count each site's full TIV once. Chat shows
-the answer and follow-up questions; raw tool results are reserved for the trace pane.
+the answer and follow-up questions. Click the small trace icon beside a response to
+inspect its execution without adding raw tool cards to the conversation.
 
 The [Step 0](exercises/step-00/README.md) and [Step 1](exercises/step-01/README.md)
 instructions describe the exercises on `main`. On this branch, re-ask the prompt-library
@@ -57,11 +58,13 @@ only needed when developing the frontend).
 |------|-------|
 | 0 (`main`) | Map, chat, tool framework with data access and map controls |
 | 1 (`step-01-tools`) | Atomic tools built and composed by the agent |
-| 2 | [Trace pane](exercises/step-02/README.md) |
+| 2 (`step-02-trace`) | [Trace pane](exercises/step-02/README.md) |
 | 3 | Generated analysis and charts (stretch) |
 
-The Step 2 trace pane has not been implemented yet. The backend already records
-execution events and returns them with each chat answer.
+The trace overlay shows ordered model/tool calls, statuses, per-step timings and
+total model/tool time. Expand a step for request details, output previews and errors.
+Each answer retains its own trace. Traces are available after the answer finishes;
+model inputs show recorded request metadata, and long outputs are previewed.
 
 Data: event footprints © Copernicus Emergency Management Service (EMS), © 2026 European Union;
 communes (ADMIN EXPRESS) and buildings (BD TOPO) © IGN, Licence Ouverte 2.0. The portfolio,

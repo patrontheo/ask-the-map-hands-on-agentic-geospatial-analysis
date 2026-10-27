@@ -168,3 +168,14 @@ def test_failed_map_batch_reaches_model_before_final_answer(bundle, scripted):
     assert errors[0]["error"]["code"] == "unknown_layer"
     assert turn.results[2].map_actions == [{"type": "show_layer", "layer_id": "sites"}]
     assert [e["payload"]["text"] for e in turn.trace if e["type"] == "assistant_message"] == ["Now shown."]
+
+
+def test_model_error_records_elapsed_time_for_trace_pane(bundle, monkeypatch):
+    def fail(*args, **kwargs):
+        raise TimeoutError("Test timeout")
+
+    monkeypatch.setattr(loop.llm_client, "create_response", fail)
+    turn = loop.run_turn("A question", ToolContext(bundle), history=[], turn_id="failed-turn")
+    error = turn.trace[-1]
+    assert error["type"] == "error" and error["payload"]["where"] == "model"
+    assert error["duration_ms"] is not None and error["duration_ms"] >= 0

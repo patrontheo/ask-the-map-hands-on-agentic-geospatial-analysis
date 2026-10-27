@@ -127,6 +127,59 @@ button { font: inherit; }
 }
 .follow-ups button:hover { background: var(--tint); }
 
+/* The answer stays uncluttered; execution detail opens in a modal. */
+.trace-button {
+  display: flex; align-items: center; justify-content: center; margin: 8px 0 0 auto;
+  width: 28px; height: 28px; border: 0; border-radius: 6px; background: transparent;
+  color: var(--muted); cursor: pointer;
+}
+.trace-button:hover { color: var(--axa-blue); background: #e7eaf7; }
+.trace-dialog {
+  width: min(800px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); padding: 0;
+  border: 1px solid var(--line); border-radius: 16px; color: var(--ink); background: var(--surface);
+  box-shadow: 0 20px 80px rgb(0 0 50 / 0.25); overflow: hidden;
+}
+.trace-dialog::backdrop { background: rgb(10 16 40 / 0.42); }
+.trace-panel { display: flex; flex-direction: column; max-height: min(86dvh, 920px); }
+.trace-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid var(--line); }
+.trace-header p { margin: 0 0 3px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+.trace-header h2 { margin: 0; color: var(--axa-blue); font-family: var(--serif); font-size: 25px; font-weight: 600; }
+.trace-close { display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--canvas); color: var(--ink); cursor: pointer; }
+.trace-close:hover { background: var(--tint); color: var(--axa-blue); }
+.trace-content { overflow: auto; padding: 18px 24px 24px; }
+.trace-question { margin: 0 0 18px; line-height: 1.5; max-height: 100px; overflow: auto; overflow-wrap: anywhere; }
+.trace-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.trace-stats > div { background: #f5f6fb; border: 1px solid #e9ecf5; border-radius: 10px; padding: 13px 15px; }
+.trace-stats span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+.trace-stats strong { color: var(--axa-blue-dark); font-size: 23px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.trace-timebar { display: flex; height: 5px; border-radius: 4px; margin-top: 13px; overflow: hidden; background: var(--canvas); }
+.trace-model-time { background: var(--axa-blue); }
+.trace-tool-time { background: #0e9f8e; }
+.trace-counts { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 8px 0 18px; }
+.trace-errors { color: var(--error); }
+.trace-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.trace-step { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.trace-step > summary { display: grid; grid-template-columns: 25px minmax(0, 1fr) auto auto 10px; align-items: center; gap: 10px; padding: 12px; cursor: pointer; list-style: none; }
+.trace-step > summary::-webkit-details-marker { display: none; }
+.trace-step > summary:hover { background: #fafbfe; }
+.trace-step-number { display: grid; place-items: center; width: 24px; height: 24px; font-size: 11px; border-radius: 50%; background: var(--tint); color: var(--axa-blue); }
+.trace-step.tool .trace-step-number { background: #e9f6f2; color: #076b5f; }
+.trace-step-label { min-width: 0; }
+.trace-step-label strong { display: block; font-size: 13px; color: var(--ink); overflow-wrap: anywhere; }
+.trace-step-label small { display: block; margin-top: 3px; font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trace-status { font-size: 10.5px; color: #076b5f; background: #e9f6f2; padding: 3px 6px; border-radius: 4px; }
+.trace-duration { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--muted); min-width: 48px; text-align: right; white-space: nowrap; }
+.trace-chevron { color: var(--muted); font-size: 20px; transition: transform 0.15s; }
+.trace-step[open] .trace-chevron { transform: rotate(90deg); }
+.trace-step.error { border-color: #efc9d0; }
+.trace-step.error .trace-status { color: var(--error); background: #fdf0f2; }
+.trace-step.incomplete .trace-status { color: #775c16; background: #fbf4dd; }
+.trace-step-details { padding: 4px 14px 14px; border-top: 1px solid var(--line); }
+.trace-step-details h3 { margin: 12px 0 6px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+.trace-step-details pre { margin: 0; padding: 12px; border-radius: 6px; background: #f4f6f9; max-height: 280px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11.5px; line-height: 1.6; }
+.trace-note { color: var(--muted); font-size: 11px; line-height: 1.5; margin: 14px 0 0; }
+.trace-empty { color: var(--muted); font-size: 14px; }
+
 .composer { display: flex; align-items: center; gap: 8px; padding: 14px 20px 20px 12px; border-top: 1px solid var(--line); }
 .library-toggle {
   flex-shrink: 0; width: 34px; height: 34px; display: grid; place-items: center;
@@ -163,6 +216,12 @@ button { font: inherit; }
 @media (max-width: 560px) {
   .topbar { padding: 0 12px; gap: 10px; }
   .brand h1 { font-size: 19px; }
+  .trace-header { padding: 16px; }
+  .trace-content { padding: 16px; }
+  .trace-stats { gap: 6px; }
+  .trace-stats > div { padding: 10px; }
+  .trace-stats strong { font-size: 18px; }
+  .trace-step > summary { gap: 7px; padding: 10px 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .msg.pending .body::after { animation: none; content: "..."; }
