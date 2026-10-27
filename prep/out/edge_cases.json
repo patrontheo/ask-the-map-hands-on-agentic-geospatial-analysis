@@ -1,0 +1,259 @@
+{
+  "summary": {
+    "sites": 100,
+    "inside": 40,
+    "inside_share_pct": 40.0,
+    "inside_per_incident": {
+      "wildfire_leporge_2026": 40
+    },
+    "property_types": {
+      "agricultural": 27,
+      "warehouse": 25,
+      "retail": 19,
+      "industrial": 14,
+      "office": 10,
+      "hotel": 5
+    },
+    "top_by_exposed_tiv": [
+      "C01",
+      "C15",
+      "C02"
+    ],
+    "top_by_exposed_share": [
+      "C15",
+      "C01",
+      "C13"
+    ]
+  },
+  "selected_site_ids": {
+    "wildfire_leporge_2026": [
+      "S002",
+      "S004",
+      "S005",
+      "S006",
+      "S010",
+      "S011",
+      "S012",
+      "S015",
+      "S017",
+      "S020",
+      "S028",
+      "S030",
+      "S038",
+      "S040",
+      "S046",
+      "S048",
+      "S050",
+      "S052",
+      "S054",
+      "S056",
+      "S057",
+      "S058",
+      "S062",
+      "S063",
+      "S064",
+      "S065",
+      "S066",
+      "S067",
+      "S071",
+      "S075",
+      "S077",
+      "S079",
+      "S081",
+      "S084",
+      "S085",
+      "S086",
+      "S088",
+      "S089",
+      "S092",
+      "S097"
+    ]
+  },
+  "company_exposure": [
+    {
+      "company_id": "C01",
+      "sites": 12,
+      "inside": 6,
+      "exposed_tiv_eur": 14110000,
+      "total_tiv_eur": 36198000,
+      "share_pct": 39.0
+    },
+    {
+      "company_id": "C02",
+      "sites": 10,
+      "inside": 2,
+      "exposed_tiv_eur": 9382000,
+      "total_tiv_eur": 31147000,
+      "share_pct": 30.1
+    },
+    {
+      "company_id": "C03",
+      "sites": 9,
+      "inside": 5,
+      "exposed_tiv_eur": 2546000,
+      "total_tiv_eur": 8171000,
+      "share_pct": 31.2
+    },
+    {
+      "company_id": "C04",
+      "sites": 8,
+      "inside": 3,
+      "exposed_tiv_eur": 724000,
+      "total_tiv_eur": 9065000,
+      "share_pct": 8.0
+    },
+    {
+      "company_id": "C05",
+      "sites": 8,
+      "inside": 3,
+      "exposed_tiv_eur": 1549000,
+      "total_tiv_eur": 6860000,
+      "share_pct": 22.6
+    },
+    {
+      "company_id": "C06",
+      "sites": 7,
+      "inside": 3,
+      "exposed_tiv_eur": 1549000,
+      "total_tiv_eur": 7087000,
+      "share_pct": 21.9
+    },
+    {
+      "company_id": "C07",
+      "sites": 7,
+      "inside": 2,
+      "exposed_tiv_eur": 147000,
+      "total_tiv_eur": 12025000,
+      "share_pct": 1.2
+    },
+    {
+      "company_id": "C08",
+      "sites": 7,
+      "inside": 4,
+      "exposed_tiv_eur": 1905000,
+      "total_tiv_eur": 61507000,
+      "share_pct": 3.1
+    },
+    {
+      "company_id": "C09",
+      "sites": 6,
+      "inside": 1,
+      "exposed_tiv_eur": 161000,
+      "total_tiv_eur": 16154000,
+      "share_pct": 1.0
+    },
+    {
+      "company_id": "C10",
+      "sites": 6,
+      "inside": 3,
+      "exposed_tiv_eur": 2049000,
+      "total_tiv_eur": 56746000,
+      "share_pct": 3.6
+    },
+    {
+      "company_id": "C11",
+      "sites": 5,
+      "inside": 2,
+      "exposed_tiv_eur": 466000,
+      "total_tiv_eur": 6991000,
+      "share_pct": 6.7
+    },
+    {
+      "company_id": "C12",
+      "sites": 5,
+      "inside": 1,
+      "exposed_tiv_eur": 155000,
+      "total_tiv_eur": 25644000,
+      "share_pct": 0.6
+    },
+    {
+      "company_id": "C13",
+      "sites": 4,
+      "inside": 2,
+      "exposed_tiv_eur": 824000,
+      "total_tiv_eur": 2415000,
+      "share_pct": 34.1
+    },
+    {
+      "company_id": "C14",
+      "sites": 3,
+      "inside": 0,
+      "exposed_tiv_eur": 0,
+      "total_tiv_eur": 7121000,
+      "share_pct": 0.0
+    },
+    {
+      "company_id": "C15",
+      "sites": 3,
+      "inside": 3,
+      "exposed_tiv_eur": 10854000,
+      "total_tiv_eur": 10854000,
+      "share_pct": 100.0
+    }
+  ],
+  "all_inside_company": "C15",
+  "no_inside_company": "C14",
+  "tie": {
+    "companies": [
+      "C05",
+      "C06"
+    ],
+    "exposed_tiv_eur": 1549000
+  },
+  "zero_tiv_site": [
+    "S057"
+  ],
+  "near_edge_sites": [
+    {
+      "site_id": "S005",
+      "incident_id": "wildfire_leporge_2026",
+      "zone_class": "edge_in",
+      "building_disagrees": true
+    },
+    {
+      "site_id": "S015",
+      "incident_id": "wildfire_leporge_2026",
+      "zone_class": "edge_in",
+      "building_disagrees": true
+    },
+    {
+      "site_id": "S016",
+      "incident_id": "wildfire_leporge_2026",
+      "zone_class": "edge_out",
+      "building_disagrees": true
+    },
+    {
+      "site_id": "S046",
+      "incident_id": "wildfire_leporge_2026",
+      "zone_class": "edge_in",
+      "building_disagrees": false
+    },
+    {
+      "site_id": "S054",
+      "incident_id": "wildfire_leporge_2026",
+      "zone_class": "edge_in",
+      "building_disagrees": false
+    },
+    {
+      "site_id": "S084",
+      "incident_id": "wildfire_leporge_2026",
+      "zone_class": "edge_in",
+      "building_disagrees": true
+    },
+    {
+      "site_id": "S098",
+      "incident_id": "wildfire_leporge_2026",
+      "zone_class": "edge_out",
+      "building_disagrees": true
+    }
+  ],
+  "vertex_site": {
+    "site_id": "S005",
+    "incident_id": "wildfire_leporge_2026",
+    "moved_from_building_point_m": 24.3
+  },
+  "district_mismatches_polygon_vs_parcel": [],
+  "site_point_outside_its_building": [
+    "S005"
+  ]
+}

@@ -1,12 +1,12 @@
 import { escapeHtml, formatEur, formatNumber } from "./format.js";
 
-// Renders tool results (tables) under an assistant answer. Results come from the backend, never from the model text.
+// Dataset reads stay in execution data; render other result tables and errors under the answer.
 export function renderResults(results) {
   const fragment = document.createDocumentFragment();
   for (const result of results) {
     if (result.status === "error") {
       fragment.append(details(`${result.tool}: error — ${result.error.message}`, `<p>${escapeHtml(result.error.hint)}</p>`, true));
-    } else if (result.table && result.table.rows.length) {
+    } else if (result.tool !== "get_dataset" && result.table && result.table.rows.length) {
       fragment.append(details(`${result.tool} · ${result.table.total_rows} row(s)`, tableHtml(result.table)));
     }
   }

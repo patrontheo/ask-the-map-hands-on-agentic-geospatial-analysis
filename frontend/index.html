@@ -25,21 +25,35 @@
     <section class="chat" aria-label="Chat">
       <div id="empty-state" class="empty-state">
         <h2>What would you like to know?</h2>
-        <p>The map starts empty. Ask the assistant to load the portfolio and the incident footprints, then ask about them. Try one of these:</p>
+        <p>The map shows the portfolio, the Le Porge wildfire footprint and the communes. Ask the assistant about them. Try one of these:</p>
         <ul class="suggestions">
-          <li><button type="button">Which incidents are available?</button></li>
-          <li><button type="button">Show my portfolio and the flood footprint on the map.</button></li>
-          <li><button type="button">Which sites lie inside the flood footprint, and how many distinct sites is that?</button></li>
+          <li><button type="button">Which sites lie inside the wildfire footprint, and how many distinct sites is that?</button></li>
+          <li><button type="button">What TIV do the sites in the footprint represent, and which companies have the highest exposed TIV?</button></li>
+          <li><button type="button">For each company, what share of its portfolio TIV is inside the footprint?</button></li>
         </ul>
       </div>
 
       <ol id="messages" class="messages" aria-live="polite"></ol>
 
-      <form id="chat-form" class="composer">
-        <label for="chat-input" class="visually-hidden">Your question</label>
-        <textarea id="chat-input" rows="2" placeholder="Ask a question about the portfolio" required></textarea>
-        <button type="submit" id="send">Ask</button>
-      </form>
+      <div class="composer-area">
+        <div id="prompt-library" class="prompt-library" hidden></div>
+
+        <form id="chat-form" class="composer">
+          <button type="button" id="library-toggle" class="library-toggle" aria-expanded="false" aria-controls="prompt-library"
+            title="Example prompts" aria-label="Example prompts">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8"
+              stroke-linecap="round" stroke-linejoin="round" d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2V16h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>
+          </button>
+          <div class="input-wrap">
+            <label for="chat-input" class="visually-hidden">Your question</label>
+            <textarea id="chat-input" rows="2" placeholder="Ask a question about the portfolio" required></textarea>
+            <button type="submit" id="send" class="send" title="Send" aria-label="Send">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor"
+                d="M3.4 20.4 21 12 3.4 3.6l.1 6.5L15 12 3.5 13.9z"/></svg>
+            </button>
+          </div>
+        </form>
+      </div>
     </section>
   </main>
 

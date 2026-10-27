@@ -1,19 +1,10 @@
 import { initChat } from "./chat.js";
-import { initMap } from "./map.js";
+import { initMap, showOverview } from "./map.js";
 
-const SESSION_KEY = "ask-the-map-session";
-
-function sessionId() {
-  let id = sessionStorage.getItem(SESSION_KEY);
-  if (!id) {
-    id = crypto.randomUUID();
-    sessionStorage.setItem(SESSION_KEY, id);
-  }
-  return id;
-}
-
-initChat({ getSessionId: sessionId });
-initMap("map").catch((err) => {
+// A reload starts a fresh transcript and map, so it also starts a fresh conversation.
+const sessionId = crypto.randomUUID();
+initChat({ getSessionId: () => sessionId });
+initMap("map").then(showOverview).catch((err) => {
   const notice = document.getElementById("map-notice");
   notice.textContent = `Map failed to load: ${err.message}`;
   notice.hidden = false;

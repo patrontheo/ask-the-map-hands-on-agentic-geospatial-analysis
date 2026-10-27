@@ -40,43 +40,70 @@ def test_layers_and_geojson(client):
     assert sites["features"][0]["properties"]["company_name"]
     assert client.get("/api/layers/incident:flood_test").json()["features"][0]["properties"]["peril"] == "flood"
     assert client.get("/api/layers/nope").status_code == 404
-    assert layers["simplified:flood_test"]["kind"] == "simplified_footprint"
-    simplified = client.get("/api/layers/simplified:flood_test").json()
-    assert simplified["features"][0]["properties"]["label"]
+    assert not any(l["id"].startswith("simplified:") for l in layers.values())
 
 
-STEP00_TOOLS = {"describe_data", "load_portfolio", "load_incident", "load_districts", "highlight_sites",
-                "zoom_map", "hide_layer"}
-COMPUTATION_TOOLS = {"select_sites_in_incident", "summarize_sites", "distance_between_sites"}
+STARTER_TOOLS = {"describe_data", "get_dataset", "show_layer", "highlight_sites",
+                 "zoom_map", "hide_layer", "suggest_follow_ups"}
+REMOVED_TOOLS = {"select_sites_in_incident", "summarize_sites", "distance_between_sites",
+                 "load_portfolio", "load_incident", "load_districts"}
 
 
-def test_step00_registers_data_and_map_tools_only(client):
+def test_starter_tools_available_without_prebuilt_computation_tools(client):
     tools = {t["name"]: t["registered"] for t in client.get("/api/tools").json()}
-    assert {name for name, registered in tools.items() if registered} == STEP00_TOOLS
-    assert COMPUTATION_TOOLS <= {name for name, registered in tools.items() if not registered}
+    assert STARTER_TOOLS <= {name for name, registered in tools.items() if registered}
+    assert REMOVED_TOOLS.isdisjoint(tools)
 
 
-def test_unregistered_tool_is_directly_callable(client):
-    r = client.post("/api/tools/select_sites_in_incident",
-                    json={"session_id": "s1", "args": {"incident_id": "flood_test"}}).json()
-    assert r["status"] == "ok" and r["data"]["n_sites"] == 6
-    bad = client.post("/api/tools/select_sites_in_incident", json={"session_id": "s1", "args": {}}).json()
+def test_unregistered_tool_is_directly_callable(client, monkeypatch):
+    from backend.app.tools.registry import TOOLS
+
+    monkeypatch.setattr(TOOLS["get_dataset"], "registered", False)
+    r = client.post("/api/tools/get_dataset", json={"session_id": "s1", "args": {"dataset_id": "districts"}}).json()
+    assert r["status"] == "ok" and r["data"]["n_rows"] == 2
+    bad = client.post("/api/tools/get_dataset", json={"session_id": "s1", "args": {}}).json()
     assert bad["error"]["code"] == "invalid_arguments"
 
 
-def test_step00_chat_offers_only_data_and_map_tools(client, fake_model):
+@pytest.mark.parametrize("name", sorted(REMOVED_TOOLS))
+def test_removed_tools_cannot_be_called_directly(client, name):
+    result = client.post(f"/api/tools/{name}", json={"session_id": "removed-tools", "args": {}}).json()
+    assert result["status"] == "error"
+    assert result["error"]["code"] == "unknown_tool"
+
+
+def test_chat_offers_registered_tools(client, fake_model):
     calls = fake_model([
-        response([item(type="function_call", call_id="c1", name="load_incident",
-                       arguments=json.dumps({"incident_id": "flood_test"}))]),
+        response([item(type="function_call", call_id="c1", name="show_layer",
+                       arguments=json.dumps({"layer_id": "incident:flood_test"}))]),
         response([item(type="message")], text="Showing the flood."),
     ])
     r = client.post("/api/chat", json={"session_id": "s2", "message": "show the flood"}).json()
-    assert {t["name"] for t in calls[0]["tools"]} == STEP00_TOOLS
+    available = {t["name"] for t in client.get("/api/tools").json() if t["registered"]}
+    assert {t["name"] for t in calls[0]["tools"]} == available
+    assert STARTER_TOOLS <= available
     assert r["reply"] == "Showing the flood."
     assert r["results"][0]["map_actions"][0] == {"type": "show_layer", "layer_id": "incident:flood_test"}
 
 
-def test_model_cannot_call_unregistered_computation_tool(client, fake_model):
+def test_dataset_results_survive_between_api_calls_without_serializing_frames(client):
+    loaded = client.post("/api/tools/get_dataset", json={
+        "session_id": "datasets", "args": {"dataset_id": "sites"},
+    }).json()
+    assert loaded["status"] == "ok" and loaded["map_actions"] == []
+    assert "_frame" not in loaded
+    highlighted = client.post("/api/tools/highlight_sites", json={
+        "session_id": "datasets", "args": {"result_id": loaded["result_id"]},
+    }).json()
+    assert highlighted["status"] == "ok" and highlighted["data"]["n_sites"] == 13
+    assert [action["type"] for action in highlighted["map_actions"]] == ["highlight_sites"]
+    other = client.post("/api/tools/get_dataset", json={
+        "session_id": "different-session", "args": {"dataset_id": loaded["result_id"]},
+    }).json()
+    assert other["error"]["code"] == "unknown_result"
+
+
+def test_model_cannot_call_removed_computation_tool(client, fake_model):
     fake_model([
         response([item(type="function_call", call_id="c1", name="select_sites_in_incident",
                        arguments=json.dumps({"incident_id": "flood_test"}))]),

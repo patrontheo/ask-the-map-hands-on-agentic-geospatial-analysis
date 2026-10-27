@@ -3,13 +3,21 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
-from pydantic import BaseModel, ValidationError
+import pandas as pd
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from backend.app.analysis import AnalysisError
 from backend.app.data import Bundle
+from backend.app.datasets import dataset_frame
 from backend.app.tools.result import ToolResult
 
 log = logging.getLogger(__name__)
+
+
+class ToolArgs(BaseModel):
+    """Reject misspelled arguments instead of silently using a tool's defaults."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
 class ResultStore:
@@ -31,13 +39,26 @@ class ToolContext:
     bundle: Bundle
     store: ResultStore = field(default_factory=ResultStore)
 
+    def get_frame(self, source: str) -> pd.DataFrame:
+        """Resolve a named dataset or result_id without exposing mutable session data."""
+        result = self.store.get(source)
+        if result is not None:
+            if result._frame is None:
+                raise AnalysisError("invalid_dataset", f"Result '{source}' contains no dataset.",
+                                    "Use get_dataset or a tool that returns a dataset result.")
+            return result._frame.copy()
+        if source.startswith("r_"):
+            raise AnalysisError("unknown_result", f"No dataset result '{source}' in this session.",
+                                "Use a result_id returned in this conversation.")
+        return dataset_frame(self.bundle, source)
+
 
 @dataclass
 class ToolSpec:
     name: str
     description: str
-    args_model: type[BaseModel]
-    fn: Callable[[Bundle, BaseModel, ToolContext], ToolResult]
+    args_model: type[ToolArgs]
+    fn: Callable[[ToolArgs, ToolContext], ToolResult]
     registered: bool = True
 
     def definition(self) -> dict:
@@ -50,7 +71,8 @@ class ToolSpec:
 TOOLS: dict[str, ToolSpec] = {}
 
 
-def tool(args: type[BaseModel], description: str = "", registered: bool = True):
+def tool(args: type[ToolArgs], description: str = "", registered: bool = True):
+    """Declare `fn(args, ctx) -> ToolResult` as a tool named after the function."""
     def decorator(fn):
         TOOLS[fn.__name__] = ToolSpec(fn.__name__, description.strip(), args, fn, registered)
         return fn
@@ -74,13 +96,15 @@ def dispatch(name: str, arguments: str | dict[str, Any], ctx: ToolContext,
     raw_args: dict[str, Any] = {}
     spec = TOOLS.get(name)
     try:
-        raw_args = json.loads(arguments or "{}") if isinstance(arguments, str) else dict(arguments or {})
         if spec is None or not (spec.registered or allow_unregistered):
             names = ", ".join(t.name for t in registered_tools())
-            result = ToolResult.fail("unknown_tool", f"No tool named '{name}' is available.",
-                                     f"Available tools: {names}.")
-        else:
-            result = spec.fn(ctx.bundle, spec.args_model.model_validate(raw_args), ctx)
+            raise AnalysisError("unknown_tool", f"No tool named '{name}' is available.", f"Available tools: {names}.")
+        parsed = json.loads(arguments or "{}") if isinstance(arguments, str) else (arguments or {})
+        if not isinstance(parsed, dict):
+            raise AnalysisError("invalid_arguments", "Arguments must be a JSON object.",
+                                'Pass named arguments, e.g. {"dataset_id": "sites"}.')
+        raw_args = parsed
+        result = spec.fn(spec.args_model.model_validate(raw_args), ctx)
     except json.JSONDecodeError as e:
         result = ToolResult.fail("invalid_arguments", "Arguments are not valid JSON.", str(e))
     except ValidationError as e:

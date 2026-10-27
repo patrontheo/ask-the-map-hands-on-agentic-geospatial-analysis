@@ -19,7 +19,6 @@ class Incident:
     id: str
     meta: dict
     polygons: gpd.GeoDataFrame  # EPSG:4326
-    baseline: gpd.GeoDataFrame | None = None  # precomputed simplified footprint for the model to read
 
 
 @dataclass(frozen=True)
@@ -54,7 +53,7 @@ def load_bundle(data_dir: Path) -> Bundle:
         polygons = polygons[polygons.geometry.notna() & ~polygons.geometry.is_empty]
         if polygons.empty:
             raise DataError(f"incident {meta['id']} has no polygons")
-        incidents[meta["id"]] = Incident(meta["id"], meta, polygons, _optional(data_dir, meta.get("baseline_path")))
+        incidents[meta["id"]] = Incident(meta["id"], meta, polygons)
 
     _validate(sites, companies, districts)
     return Bundle(

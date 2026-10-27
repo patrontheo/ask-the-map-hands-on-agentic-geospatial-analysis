@@ -1,0 +1,26 @@
+{
+  "crs_projected": "EPSG:2154",
+  "currency": "EUR",
+  "incidents": [
+    {
+      "id": "wildfire_leporge_2026",
+      "peril": "wildfire",
+      "name": "Le Porge wildfire, Gironde",
+      "date": "2026-07-29",
+      "crs_projected": "EPSG:2154",
+      "path": "events/wildfire_leporge_2026.geojson",
+      "layer": "observed burnt area",
+      "processing": "Generalised from the published layer to 2,974 vertices: gaps up to 120 m closed, parts under 1 ha dropped, 40 m simplification; 12.3 % of the area differs.",
+      "source": "Copernicus Emergency Management Service (© 2026 European Union), [EMSR899] Le Porge (AOI01): Delineation Map, Monitoring 2",
+      "product_id": "EMSR899_AOI01_DEL_MONIT02_v1",
+      "licence": "Copernicus EMS data policy (Regulation (EU) 2021/696): free reproduction, distribution and adaptation with attribution"
+    }
+  ],
+  "portfolio": {
+    "sites": "portfolio/sites.csv",
+    "companies": "portfolio/companies.csv",
+    "buildings": "portfolio/buildings.geojson",
+    "parcels": "portfolio/parcels.geojson"
+  },
+  "districts": "admin/districts.geojson"
+}

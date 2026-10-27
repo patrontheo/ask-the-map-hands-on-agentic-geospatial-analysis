@@ -1,0 +1,144 @@
+{
+  "reference_method": "Independent projected ray casting and raw CSV sums; cross-checked with prep/out/edge_cases.json. Frozen 2026-10-27.",
+  "input_sha256": {
+    "catalog.json": "e13530d1e360b87c35633b95f47ae24e2e948c89729dae745c31b246157d7ff8",
+    "portfolio/sites.csv": "207c624d9a9c11db9a37b6657bab6b75edebec8092a4b310e7ae95926f40b2de",
+    "portfolio/companies.csv": "7dfdd76108ecb3935a35830fe87e3c52af1ad6ffb7beb14896fe0ec825e6865c",
+    "admin/districts.geojson": "e1d9233bb5264ec79cc0e14eca3826e2f80f3ac2d56e77fdabe25d43a2928102",
+    "events/wildfire_leporge_2026.geojson": "cc326b718e623187fb68c9ff4c1d7ba38afd58e1ee5f4a73e68fa60fe13b1f2f"
+  },
+  "incidents": {
+    "wildfire_leporge_2026": {
+      "site_ids": [
+        "S002",
+        "S004",
+        "S005",
+        "S006",
+        "S010",
+        "S011",
+        "S012",
+        "S015",
+        "S017",
+        "S020",
+        "S028",
+        "S030",
+        "S038",
+        "S040",
+        "S046",
+        "S048",
+        "S050",
+        "S052",
+        "S054",
+        "S056",
+        "S057",
+        "S058",
+        "S062",
+        "S063",
+        "S064",
+        "S065",
+        "S066",
+        "S067",
+        "S071",
+        "S075",
+        "S077",
+        "S079",
+        "S081",
+        "S084",
+        "S085",
+        "S086",
+        "S088",
+        "S089",
+        "S092",
+        "S097"
+      ],
+      "n_sites": 40,
+      "tiv_eur": 46421000,
+      "by_company": [
+        {
+          "group": "C01",
+          "group_name": "Halvorne Logistics",
+          "n_sites": 6,
+          "tiv_eur": 14110000
+        },
+        {
+          "group": "C15",
+          "group_name": "Saltmarrow Campings",
+          "n_sites": 3,
+          "tiv_eur": 10854000
+        },
+        {
+          "group": "C02",
+          "group_name": "Corvanel Retail Group",
+          "n_sites": 2,
+          "tiv_eur": 9382000
+        },
+        {
+          "group": "C03",
+          "group_name": "Duneveil Hospitality",
+          "n_sites": 5,
+          "tiv_eur": 2546000
+        },
+        {
+          "group": "C10",
+          "group_name": "Ombrelle Textiles",
+          "n_sites": 3,
+          "tiv_eur": 2049000
+        },
+        {
+          "group": "C08",
+          "group_name": "Brisemer Marine Supply",
+          "n_sites": 4,
+          "tiv_eur": 1905000
+        },
+        {
+          "group": "C05",
+          "group_name": "Quillmoor Engineering",
+          "n_sites": 3,
+          "tiv_eur": 1549000
+        },
+        {
+          "group": "C06",
+          "group_name": "Ardentis Office Partners",
+          "n_sites": 3,
+          "tiv_eur": 1549000
+        },
+        {
+          "group": "C13",
+          "group_name": "Vinomarel Negoce",
+          "n_sites": 2,
+          "tiv_eur": 824000
+        },
+        {
+          "group": "C04",
+          "group_name": "Ferlune Agri Services",
+          "n_sites": 3,
+          "tiv_eur": 724000
+        },
+        {
+          "group": "C11",
+          "group_name": "Kestrelon Data Services",
+          "n_sites": 2,
+          "tiv_eur": 466000
+        },
+        {
+          "group": "C09",
+          "group_name": "Tarnwick Pharma",
+          "n_sites": 1,
+          "tiv_eur": 161000
+        },
+        {
+          "group": "C12",
+          "group_name": "Lumivert Garden Centres",
+          "n_sites": 1,
+          "tiv_eur": 155000
+        },
+        {
+          "group": "C07",
+          "group_name": "Velloran Foods",
+          "n_sites": 2,
+          "tiv_eur": 147000
+        }
+      ]
+    }
+  }
+}

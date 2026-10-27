@@ -9,14 +9,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # run by path: mak
 import backend.app.tools  # noqa: F401
 from backend.app.agent.loop import run_turn
 from backend.app.data import load_bundle
-from backend.app.tools.registry import TOOLS, ToolContext
+from backend.app.tools.registry import ToolContext
 from tests.conftest import FIXTURE_DIR
 
-for spec in TOOLS.values():  # the spike tests the tool loop, so register everything (step-00 ships them unregistered)
-    spec.registered = True
-
 question = sys.argv[1] if len(sys.argv) > 1 else (
-    "Which sites are in the flood footprint, and which companies have the highest exposed TIV there?")
+    "Read the sites and flood footprint datasets, then show both layers and zoom to them together.")
 
 start = time.perf_counter()
 turn = run_turn(question, ToolContext(load_bundle(FIXTURE_DIR)), history=[], turn_id="t_spike")
