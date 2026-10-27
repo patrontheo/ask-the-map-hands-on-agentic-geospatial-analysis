@@ -72,7 +72,8 @@ def id_field(frame: pd.DataFrame) -> str | None:
 
 
 def column_unit(name: str) -> str | None:
-    return "EUR" if name.endswith("_eur") else None
+    return next((unit for suffix, unit in (("_eur", "EUR"), ("_ha", "ha"), ("_m2", "m²"),
+                                           ("_km2", "km²"), ("_pct", "%")) if name.endswith(suffix)), None)
 
 
 def frame_info(frame: pd.DataFrame) -> dict:
