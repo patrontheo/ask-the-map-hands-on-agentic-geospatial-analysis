@@ -9,6 +9,13 @@ export const PROMPT_GROUPS = [
     ],
   },
   {
+    title: "Communes",
+    prompts: [
+      "Which commune has the highest percentage of its area burnt by the wildfire?",
+      "How much of Arès was burnt by the wildfire, in hectares and as a percentage of its total area?",
+    ],
+  },
+  {
     title: "Explore the data",
     prompts: [
       "Describe the portfolio: how many sites and companies are there, and what is the total TIV?",
