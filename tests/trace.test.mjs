@@ -129,3 +129,69 @@ test("previews are bounded and escaped without mutating the original outputs", (
   assert.match(content.innerHTML, /preview truncated/);
   assert.doesNotMatch(content.innerHTML, /HIDDEN_TAIL/);
 });
+
+function priceTurn(turn) {
+  for (const event of turn.trace.filter((e) => e.type === "llm_response")) {
+    event.payload.cost = { status: "estimated", total_usd: 0.000204,
+      pricing: { model: "gpt-6-luna", tier: "Standard", checked_on: "2026-10-27",
+        rates_per_million: { input: 0.1, cache_read: 0.01, cache_write_30m: 0.125, cache_write_12h: 0.25, output: 0.5 } },
+      components: [{ kind: "cache_write_30m", tokens: 1190, rate_per_million: 0.125, cost_usd: 0.00014875 },
+        { kind: "output", tokens: 49, rate_per_million: 0.5, cost_usd: 0.0000245 }],
+      note: "Default 30-minute cache writes." };
+  }
+  return turn;
+}
+
+test("shows total and per-call USD costs with cache breakdown and precise rates", (t) => {
+  const { content } = setupDom(t);
+  const turn = priceTurn(response());
+  const trace = buildTrace(turn);
+  assert.equal(trace.totalCostUsd, 0.000408);
+  assert.equal(trace.unpricedCalls, 0);
+  createTraceButton("Cost?", turn).click();
+  assert.match(content.innerHTML, /Estimated total API cost · USD/);
+  assert.match(content.innerHTML, /\$0\.000408/);
+  assert.equal((content.innerHTML.match(/class="trace-call-cost">\$0\.000204/g) ?? []).length, 2);
+  assert.match(content.innerHTML, /Cache writes · 30 min/);
+  assert.match(content.innerHTML, /<td>\$0\.125<\/td>/);
+  assert.match(content.innerHTML, /Output \(includes reasoning\)/);
+  assert.match(content.innerHTML, /Default 30-minute cache writes/);
+  assert.match(content.innerHTML, /Published prices/);
+  assert.ok(content.innerHTML.indexOf("Estimated total API cost") < content.innerHTML.indexOf("Total agent time"));
+});
+
+test("unknown usage, failed calls and older traces cannot display a partial cost as total", (t) => {
+  const { content } = setupDom(t);
+  const turn = priceTurn(response());
+  turn.trace[6].payload.cost = { status: "unavailable", total_usd: null, reason: "Cache writes not reported." };
+  let trace = buildTrace(turn);
+  assert.equal(trace.totalCostUsd, null);
+  assert.equal(trace.knownCostUsd, 0.000204);
+  assert.equal(trace.unpricedCalls, 1);
+  createTraceButton("Unknown cost", turn).click();
+  assert.match(content.innerHTML, /Estimated total API cost · USD<\/span><strong>Unavailable/);
+  assert.match(content.innerHTML, /Known calls subtotal: \$0\.000204/);
+  assert.match(content.innerHTML, /Cache writes not reported/);
+  turn.trace[6] = { type: "error", payload: { where: "model", message: "Timed out." } };
+  trace = buildTrace(turn);
+  assert.equal(trace.totalCostUsd, null);
+  assert.equal(trace.unpricedCalls, 1);
+  assert.equal(buildTrace(response()).totalCostUsd, null);
+  assert.equal(buildTrace({}).totalCostUsd, null);
+});
+
+test("explicit zero and tiny positive costs are shown accurately", (t) => {
+  const { content } = setupDom(t);
+  const turn = priceTurn(response());
+  turn.trace[2].payload.cost.total_usd = 0;
+  turn.trace[6].payload.cost.total_usd = 0;
+  assert.equal(buildTrace(turn).totalCostUsd, 0);
+  createTraceButton("Zero cost", turn).click();
+  assert.match(content.innerHTML, /Estimated total API cost · USD<\/span><strong>\$0\.000000/);
+  turn.trace[2].payload.cost.total_usd = 0.0000001;
+  turn.trace[2].payload.cost.note = "<script>untrusted</script>";
+  createTraceButton("Small cost", turn).click();
+  assert.match(content.innerHTML, /<\$0\.000001/);
+  assert.doesNotMatch(content.innerHTML, /<script>/);
+  assert.match(content.innerHTML, /&lt;script&gt;/);
+});

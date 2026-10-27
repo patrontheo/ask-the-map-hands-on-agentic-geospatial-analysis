@@ -148,6 +148,17 @@ button { font: inherit; }
 .trace-close:hover { background: var(--tint); color: var(--axa-blue); }
 .trace-content { overflow: auto; padding: 18px 24px 24px; }
 .trace-question { margin: 0 0 18px; line-height: 1.5; max-height: 100px; overflow: auto; overflow-wrap: anywhere; }
+.trace-cost-total { margin-bottom: 12px; padding: 16px; border: 1px solid #dce2f5; border-radius: 10px; background: #f5f6fb; }
+.trace-cost-total > span { display: block; color: var(--muted); font-size: 12px; }
+.trace-cost-total > strong { display: block; margin-top: 5px; color: var(--axa-blue-dark); font-size: 28px; font-variant-numeric: tabular-nums; }
+.trace-cost-total p, .trace-pricing { margin: 8px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.trace-pricing > summary { cursor: pointer; }
+.trace-step-metrics { text-align: right; }
+.trace-call-cost { display: block; margin-top: 4px; font-size: 11px; color: var(--axa-blue); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.trace-cost-breakdown { overflow-x: auto; }
+.trace-cost-breakdown table { width: 100%; border-collapse: collapse; font-size: 11px; white-space: nowrap; }
+.trace-cost-breakdown th, .trace-cost-breakdown td { padding: 7px 5px; border-bottom: 1px solid var(--line); text-align: right; font-variant-numeric: tabular-nums; }
+.trace-cost-breakdown th:first-child { text-align: left; font-weight: 500; }
 .trace-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .trace-stats > div { background: #f5f6fb; border: 1px solid #e9ecf5; border-radius: 10px; padding: 13px 15px; }
 .trace-stats span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }

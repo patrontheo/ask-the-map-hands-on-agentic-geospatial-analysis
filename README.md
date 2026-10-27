@@ -66,6 +66,21 @@ total model/tool time. Expand a step for request details, output previews and er
 Each answer retains its own trace. Traces are available after the answer finishes;
 model inputs show recorded request metadata, and long outputs are previewed.
 
+The pane also shows estimated API cost in USD for the whole answer and each model
+call. Expand a model call for ordinary input, cache reads, cache writes and output
+costs. Reasoning tokens are already included in output. Missing usage is shown as
+unavailable, and partial costs are never presented as the total.
+
+Estimates use [GPT-6 Luna Standard public API prices](https://developers.openai.com/api/docs/models/gpt-6-luna),
+checked 27 October 2026: $0.10 input, $0.01 cache reads, $0.125 cache writes (30 min)
+or $0.25 (12 h), and $0.50 output, per million tokens. Prompts over 272,000 input
+tokens use 2× input/cache rates and 1.5× output rates. Cache-write lifetime defaults
+to 30 minutes when the API omits it; the trace labels this assumption. This is a
+public Standard API equivalent, so provider invoices and regional pricing can differ.
+`LLM_PRICING_MODEL` defaults to `gpt-6-luna`, independently of the deployment alias
+in `LLM_MODEL`; unsupported pricing models show unavailable until rates are added
+in `backend/app/agent/cost.py`.
+
 Data: event footprints © Copernicus Emergency Management Service (EMS), © 2026 European Union;
 communes (ADMIN EXPRESS) and buildings (BD TOPO) © IGN, Licence Ouverte 2.0. The portfolio,
 companies and insured values are synthetic. Sources and processing are listed in `data/catalog.json`

@@ -2,7 +2,12 @@ import { escapeHtml } from "./format.js";
 
 const number = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
 const count = new Intl.NumberFormat("en-GB");
+const rate = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 3 });
 const duration = (ms) => ms == null ? "—" : ms < 1000 ? `${number.format(ms)} ms` : `${number.format(ms / 1000)} s`;
+const dollars = (value) => value == null ? "Unavailable"
+  : value > 0 && value < 0.000001 ? "<$0.000001" : `$${value.toFixed(6)}`;
+const hasCost = (step) => step.cost?.status === "estimated"
+  && Number.isFinite(step.cost.total_usd) && step.cost.total_usd >= 0;
 
 // Pair backend events; tool outputs live in response.results, linked by result_id.
 export function buildTrace(response) {
@@ -20,7 +25,7 @@ export function buildTrace(response) {
       model = { kind: "model", name: `Model call ${++modelCalls}`, status: "incomplete", input: payload };
       steps.push(model);
     } else if (event.type === "llm_response" && model) {
-      Object.assign(model, { status: "ok", durationMs: event.duration_ms, output: payload,
+      Object.assign(model, { status: "ok", durationMs: event.duration_ms, output: payload, cost: payload.cost,
         summary: payload.function_calls?.length
           ? `Requested ${payload.function_calls.map((call) => call.name).join(", ")}` : "Produced an answer" });
       inputTokens += payload.usage?.input_tokens ?? 0;
@@ -45,10 +50,16 @@ export function buildTrace(response) {
       }
     }
   }
-  const modelMs = steps.filter((step) => step.kind === "model").reduce((sum, step) => sum + (step.durationMs ?? 0), 0);
+  const modelSteps = steps.filter((step) => step.kind === "model");
+  const modelMs = modelSteps.reduce((sum, step) => sum + (step.durationMs ?? 0), 0);
+  const pricedSteps = modelSteps.filter(hasCost);
+  const knownCostUsd = pricedSteps.reduce((sum, step) => sum + step.cost.total_usd, 0);
+  const unpricedCalls = modelCalls - pricedSteps.length;
   const toolMs = steps.filter((step) => step.kind === "tool").reduce((sum, step) => sum + (step.durationMs ?? 0), 0);
   const elapsed = Date.parse(events.at(-1)?.ts) - Date.parse(events[0]?.ts);
   return { steps, modelCalls, toolCalls: calls.size, inputTokens, outputTokens, modelMs, toolMs,
+    knownCostUsd, unpricedCalls, totalCostUsd: modelCalls && !unpricedCalls ? knownCostUsd : null,
+    pricing: modelSteps.find((step) => step.cost?.pricing)?.cost.pricing,
     totalMs: Number.isFinite(elapsed) ? Math.max(0, elapsed) : modelMs + toolMs,
     errors: steps.filter((step) => step.status === "error").length };
 }
@@ -64,6 +75,36 @@ function outputPreview(output) {
   return { ...output, table: { ...output.table, rows: output.table.rows.slice(0, 10) } };
 }
 
+function costDetails(step) {
+  if (step.kind !== "model") return "";
+  if (!hasCost(step)) return `<p class="trace-note">Cost unavailable: ${escapeHtml(step.cost?.reason ?? "Token usage or pricing was not recorded for this call.")}</p>`;
+  const labels = { input: "Ordinary input", cache_read: "Cache reads", cache_write_30m: "Cache writes · 30 min",
+    cache_write_12h: "Cache writes · 12 h", output: "Output (includes reasoning)" };
+  const rows = step.cost.components.map((part) => `<tr><th scope="row">${escapeHtml(labels[part.kind] ?? part.kind)}</th>
+    <td>${count.format(part.tokens)}</td><td>$${rate.format(part.rate_per_million)}</td><td>${dollars(part.cost_usd)}</td></tr>`).join("");
+  return `<h3>Estimated API cost · USD</h3>
+    <div class="trace-cost-breakdown"><table><thead><tr><th>Tokens</th><th>Count</th><th>USD / 1M</th><th>Cost</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>
+    ${step.cost.long_context ? '<p class="trace-note">Long prompt rates apply to the full request: 2× input/cache and 1.5× output.</p>' : ""}
+    ${step.cost.note ? `<p class="trace-note">${escapeHtml(step.cost.note)}</p>` : ""}`;
+}
+
+function costSummary(trace) {
+  const pricing = trace.pricing;
+  const rates = pricing?.rates_per_million;
+  return `<div class="trace-cost-total">
+    <span>Estimated total API cost · USD</span><strong>${dollars(trace.totalCostUsd)}</strong>
+    ${trace.unpricedCalls ? `<p>${trace.unpricedCalls} model call(s) have no cost estimate.${trace.modelCalls > trace.unpricedCalls
+      ? ` Known calls subtotal: ${dollars(trace.knownCostUsd)}.` : ""}</p>` : ""}
+    ${rates ? `<details class="trace-pricing"><summary>${escapeHtml(pricing.model)} · ${escapeHtml(pricing.tier)} public API prices</summary>
+      <p>USD per million tokens: input $${rates.input}, cache reads $${rates.cache_read},
+        cache writes $${rates.cache_write_30m} (30 min) / $${rates.cache_write_12h} (12 h), output $${rates.output}.</p>
+      <p>Public API equivalent; your provider’s invoice may differ. Local tools have no model API charge.
+        Prices checked ${escapeHtml(pricing.checked_on)} · <a href="https://developers.openai.com/api/docs/models/gpt-6-luna" target="_blank" rel="noopener noreferrer">Published prices</a>.</p>
+      </details>` : ""}
+  </div>`;
+}
+
 function stepHtml(step, index) {
   const status = { ok: "OK", error: "Error", incomplete: "Incomplete" }[step.status] ?? step.status;
   const rowCount = step.output?.table?.total_rows;
@@ -74,10 +115,12 @@ function stepHtml(step, index) {
       <span class="trace-step-label"><strong>${escapeHtml(step.name)}</strong>
         <small>${escapeHtml(step.summary ?? "No completion recorded")}</small></span>
       <span class="trace-status">${escapeHtml(status)}</span>
-      <span class="trace-duration">${duration(step.durationMs)}</span>
+      <span class="trace-step-metrics"><span class="trace-duration">${duration(step.durationMs)}</span>
+        ${step.kind === "model" ? `<small class="trace-call-cost">${dollars(hasCost(step) ? step.cost.total_usd : null)}</small>` : ""}</span>
       <span class="trace-chevron" aria-hidden="true">›</span>
     </summary>
     <div class="trace-step-details">
+      ${costDetails(step)}
       <h3>${step.kind === "model" ? "Request metadata" : "Input"}</h3>
       <pre>${escapeHtml(jsonPreview(step.input))}</pre>
       <h3>Output preview</h3>
@@ -94,7 +137,7 @@ function traceHtml(message, response) {
   const modelPercent = timedMs > 0 ? 100 * trace.modelMs / timedMs : 0;
   const tokens = trace.inputTokens || trace.outputTokens
     ? ` · ${count.format(trace.inputTokens)} input / ${count.format(trace.outputTokens)} output tokens` : "";
-  return `${context}
+  return `${context}${costSummary(trace)}
     <div class="trace-stats">
       <div><span>Total agent time</span><strong>${duration(trace.totalMs)}</strong></div>
       <div><span>Model</span><strong>${duration(trace.modelMs)}</strong></div>

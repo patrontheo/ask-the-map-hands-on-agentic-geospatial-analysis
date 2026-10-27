@@ -4,6 +4,7 @@ from pathlib import Path
 
 from backend.app import config
 from backend.app.agent import llm_client
+from backend.app.agent.cost import estimate_cost
 from backend.app.agent.trace import Timer, Trace
 from backend.app.tools.registry import ToolContext, dispatch, tool_definitions
 from backend.app.tools.result import ToolResult, to_llm_payload
@@ -40,11 +41,12 @@ def run_turn(message: str, ctx: ToolContext, history: list, turn_id: str,
             return TurnResult("The model request failed; see the trace for details.", results, trace.events, items)
 
         calls = [o for o in response.output if o.type == "function_call"]
-        usage = response.usage
+        usage = response.usage.model_dump(exclude_none=True) if response.usage else None
         trace.emit("llm_response", {
             "text": response.output_text,
             "function_calls": [{"call_id": c.call_id, "name": c.name, "arguments": c.arguments} for c in calls],
-            "usage": {"input_tokens": usage.input_tokens, "output_tokens": usage.output_tokens} if usage else None,
+            "usage": usage,
+            "cost": estimate_cost(usage, config.LLM_PRICING_MODEL),
         }, t.ms)
         items += [o.model_dump(exclude_none=True) for o in response.output]
 

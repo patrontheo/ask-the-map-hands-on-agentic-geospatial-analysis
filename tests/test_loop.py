@@ -13,7 +13,7 @@ def item(**kw):
 
 def response(output, text=""):
     return SimpleNamespace(output=output, output_text=text,
-                           usage=SimpleNamespace(input_tokens=10, output_tokens=5))
+                           usage=item(input_tokens=10, output_tokens=5))
 
 
 @pytest.fixture
@@ -48,6 +48,23 @@ def test_two_tool_turn_feeds_results_back(bundle, scripted):
     outputs = [i for i in seen[1] if isinstance(i, dict) and i.get("type") == "function_call_output"]
     assert outputs[0]["call_id"] == "c1" and json.loads(outputs[0]["output"])["data"]["n_rows"] == 13
     assert len(json.loads(outputs[0]["output"])["table"]["rows"]) == 13
+
+
+def test_trace_keeps_full_usage_and_prices_every_model_call(bundle, scripted):
+    from openai.types.responses import ResponseUsage
+
+    answer = response([], text="Done.")
+    answer.usage = ResponseUsage.model_validate({
+        "input_tokens": 12_000, "output_tokens": 2_000, "total_tokens": 14_000,
+        "input_tokens_details": {"cached_tokens": 4_000, "cache_write_tokens": 7_000,
+            "cache_write_tokens_details": {"ttl_30m_tokens": 3_000, "ttl_12h_tokens": 4_000}},
+        "output_tokens_details": {"reasoning_tokens": 1_000}})
+    scripted([answer])
+    turn = loop.run_turn("q", ToolContext(bundle), history=[], turn_id="t1")
+    payload = next(e["payload"] for e in turn.trace if e["type"] == "llm_response")
+    assert payload["usage"] == answer.usage.model_dump()
+    assert payload["cost"]["total_usd"] == pytest.approx(0.002_515)
+    assert "cost" not in json.dumps(turn.items)
 
 
 def test_tool_error_goes_back_to_model(bundle, scripted):
