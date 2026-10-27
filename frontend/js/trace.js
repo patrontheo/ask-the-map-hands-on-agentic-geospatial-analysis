@@ -90,19 +90,22 @@ function costDetails(step) {
 }
 
 function costSummary(trace) {
-  const pricing = trace.pricing;
-  const rates = pricing?.rates_per_million;
   return `<div class="trace-cost-total">
     <span>Estimated total API cost · USD</span><strong>${dollars(trace.totalCostUsd)}</strong>
-    ${trace.unpricedCalls ? `<p>${trace.unpricedCalls} model call(s) have no cost estimate.${trace.modelCalls > trace.unpricedCalls
+  </div>`;
+}
+
+function pricingDetails(trace) {
+  const pricing = trace.pricing;
+  const rates = pricing?.rates_per_million;
+  return `${trace.unpricedCalls ? `<p class="trace-note">${trace.unpricedCalls} model call(s) have no cost estimate.${trace.modelCalls > trace.unpricedCalls
       ? ` Known calls subtotal: ${dollars(trace.knownCostUsd)}.` : ""}</p>` : ""}
     ${rates ? `<details class="trace-pricing"><summary>${escapeHtml(pricing.model)} · ${escapeHtml(pricing.tier)} public API prices</summary>
       <p>USD per million tokens: input $${rates.input}, cache reads $${rates.cache_read},
         cache writes $${rates.cache_write_30m} (30 min) / $${rates.cache_write_12h} (12 h), output $${rates.output}.</p>
       <p>Public API equivalent; your provider’s invoice may differ. Local tools have no model API charge.
         Prices checked ${escapeHtml(pricing.checked_on)} · <a href="https://developers.openai.com/api/docs/models/gpt-6-luna" target="_blank" rel="noopener noreferrer">Published prices</a>.</p>
-      </details>` : ""}
-  </div>`;
+      </details>` : ""}`;
 }
 
 function stepHtml(step, index) {
@@ -137,12 +140,14 @@ function traceHtml(message, response) {
   const modelPercent = timedMs > 0 ? 100 * trace.modelMs / timedMs : 0;
   const tokens = trace.inputTokens || trace.outputTokens
     ? ` · ${count.format(trace.inputTokens)} input / ${count.format(trace.outputTokens)} output tokens` : "";
-  return `${context}${costSummary(trace)}
+  return `${context}
     <div class="trace-stats">
       <div><span>Total agent time</span><strong>${duration(trace.totalMs)}</strong></div>
       <div><span>Model</span><strong>${duration(trace.modelMs)}</strong></div>
       <div><span>Tools</span><strong>${duration(trace.toolMs)}</strong></div>
+      ${costSummary(trace)}
     </div>
+    ${pricingDetails(trace)}
     <div class="trace-timebar" role="img" aria-label="Model time ${duration(trace.modelMs)}, tool time ${duration(trace.toolMs)}">
       <span class="trace-model-time" style="width:${modelPercent}%"></span>
       <span class="trace-tool-time" style="width:${timedMs > 0 ? 100 - modelPercent : 0}%"></span>

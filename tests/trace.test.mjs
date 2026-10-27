@@ -157,7 +157,7 @@ test("shows total and per-call USD costs with cache breakdown and precise rates"
   assert.match(content.innerHTML, /Output \(includes reasoning\)/);
   assert.match(content.innerHTML, /Default 30-minute cache writes/);
   assert.match(content.innerHTML, /Published prices/);
-  assert.ok(content.innerHTML.indexOf("Estimated total API cost") < content.innerHTML.indexOf("Total agent time"));
+  assert.ok(content.innerHTML.indexOf("Estimated total API cost") > content.innerHTML.indexOf("Tools</span>"));
 });
 
 test("unknown usage, failed calls and older traces cannot display a partial cost as total", (t) => {
