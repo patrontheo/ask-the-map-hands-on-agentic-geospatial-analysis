@@ -51,11 +51,14 @@ only needed when developing the frontend).
 | Step | Stage |
 |------|-------|
 | 0 (`main`) | Map, chat, tool framework with data access and map controls |
-| 1 (`step-01-tools`) | Atomic tools built and composed by the agent |
-| 2 | [Trace pane](exercises/step-02/README.md) |
+| 1 (`step-01-tools`) | [Calculation tools built and composed by the agent](exercises/step-01/README.md) |
+| 2 (`step-02-trace`) | [Trace pane and API cost tracking](exercises/step-02/README.md) |
 | 3 | Generated analysis and charts (stretch) |
 
-The Step 2 trace pane has not been implemented yet. The backend already records
+`main` is the Step 0 starter. Checkpoint implementations are available on
+`step-01-tools` and `step-02-trace`.
+
+The Step 2 trace pane and API cost tracking are not implemented on this branch. The backend already records
 execution events and returns them with each chat answer.
 
 Data: event footprints © Copernicus Emergency Management Service (EMS), © 2026 European Union;
