@@ -1,4 +1,8 @@
+from dataclasses import replace
+
+import geopandas as gpd
 import pytest
+from shapely.geometry import MultiPolygon, box
 
 from backend.app.analysis import (AnalysisError, distance_between_sites, incident_footprint,
                                   select_sites_in_incident, summarize_sites)
@@ -15,6 +19,31 @@ def test_flood_selection_counts_overlap_once_and_includes_boundary(bundle):
 
 def test_wildfire_selection(bundle):
     assert select_sites_in_incident(bundle, "wildfire_test").site_ids == ["S08", "S11"]
+
+
+def test_any_building_intersection_overrides_pinpoint_and_counts_site_once(bundle):
+    outside = box(704400, 7059000, 704500, 7059100)
+    inside = box(701000, 7059000, 701100, 7059100)
+    buildings = gpd.GeoDataFrame({"site_id": ["S03", "S03", "S01"]},
+                                geometry=[MultiPolygon([outside, inside]), inside, outside], crs=2154)
+    result = select_sites_in_incident(replace(bundle, buildings=buildings), "flood_test")
+    assert result.site_ids == ["S03"]  # outside point, but one building part is inside
+    assert result.n_sites == 1  # repeated building rows do not count twice
+    assert result.metadata["selection_basis"] == "building_intersection"
+    # S01's pinpoint is inside, but its supplied building is outside: the point is not used.
+
+
+def test_building_boundary_contact_counts_as_affected(bundle):
+    footprint = incident_footprint(bundle, "flood_test").union_projected
+    east = footprint.bounds[2]
+    buildings = gpd.GeoDataFrame({"site_id": ["S03"]},
+                                geometry=[box(east, 7059000, east + 50, 7059050)], crs=2154)
+    assert select_sites_in_incident(replace(bundle, buildings=buildings), "flood_test").site_ids == ["S03"]
+
+
+def test_bundles_without_buildings_use_explicit_point_fallback(bundle):
+    result = select_sites_in_incident(bundle, "flood_test")
+    assert result.metadata["selection_basis"] == "point_fallback"
 
 
 def test_unknown_incident_lists_valid_ids(bundle):

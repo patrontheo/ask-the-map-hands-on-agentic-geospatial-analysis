@@ -44,7 +44,7 @@ def test_layers_and_geojson(client):
 
 
 def test_frontend_files_are_revalidated_on_reload(client):
-    for path in ("/", "/js/results.js"):
+    for path in ("/", "/js/chat.js"):
         r = client.get(path)
         assert r.status_code == 200 and r.headers["cache-control"] == "no-cache"
 

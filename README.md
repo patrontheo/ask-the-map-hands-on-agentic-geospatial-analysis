@@ -37,6 +37,10 @@ The seven data/map/UI tools are `describe_data`, `get_dataset`, `show_layer`,
 Reading data keeps the map unchanged; displaying a layer or highlighting sites
 keeps the camera unchanged. Zooming is an explicit operation.
 
+A site is affected when any of its buildings intersects the wildfire footprint,
+even if its map pinpoint is outside. Count each site's full TIV once. Chat shows
+the answer and follow-up questions; raw tool results are reserved for the trace pane.
+
 The [Step 0](exercises/step-00/README.md) and [Step 1](exercises/step-01/README.md)
 instructions describe the exercises on `main`. On this branch, re-ask the prompt-library
 questions to try the implemented tools. The agent can use up to 16 model calls per
@@ -44,7 +48,7 @@ turn; set `MAX_MODEL_CALLS` to adjust this for longer workflows.
 
 Run backend and reference checks with `uv run pytest`. Add acceptance tests for
 each new operation as part of Step 1. Frontend regression
-checks use Node's built-in runner: `node --test tests/frontend.test.mjs` (Node 22+;
+checks use Node's built-in runner: `node --test tests/*.test.mjs` (Node 22+;
 only needed when developing the frontend).
 
 ## Steps

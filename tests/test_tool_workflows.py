@@ -21,8 +21,13 @@ def real_bundle():
 
 
 def selection(ctx, incident):
-    joined = run(ctx, "spatial_join", left="sites", right=f"incident:{incident}", predicate="covered_by")
-    return run(ctx, "distinct_rows", source=joined.result_id, columns=["site_id"])
+    has_buildings = ctx.bundle.buildings is not None
+    joined = run(ctx, "spatial_join", left="buildings" if has_buildings else "sites",
+                 right=f"incident:{incident}", predicate="intersects" if has_buildings else "covered_by")
+    distinct = run(ctx, "distinct_rows", source=joined.result_id, columns=["site_id"])
+    if has_buildings:
+        return run(ctx, "join_tables", left=distinct.result_id, right="sites", on=["site_id"])
+    return distinct
 
 
 def company_shares(ctx, selected):
@@ -59,12 +64,13 @@ def test_real_selection_totals_rankings_and_company_shares(real_bundle):
     expected = json.loads((REPO_ROOT / "tests/expected.json").read_text())["incidents"][incident]
     selected = selection(ctx, incident)
     assert sorted(row["site_id"] for row in selected.table.rows) == expected["site_ids"]
-    assert selected.table.total_rows == expected["n_sites"] == 40
+    assert selected.table.total_rows == expected["n_sites"] == 43
+    assert {"S016", "S076", "S098"} <= {row["site_id"] for row in selected.table.rows}
     total = run(ctx, "aggregate", source=selected.result_id, measures=[
         {"function": "count", "output": "n_sites"},
         {"function": "sum", "column": "tiv_eur", "output": "tiv_eur"},
     ])
-    assert total.table.rows == [{"n_sites": 40, "tiv_eur": expected["tiv_eur"]}]
+    assert total.table.rows == [{"n_sites": 43, "tiv_eur": expected["tiv_eur"]}]
     shares = company_shares(ctx, selected)
     exposed_rows = [row for row in shares.table.rows if row["n_exposed_sites"] > 0]
     assert [{"group": row["company_id"], "group_name": row["company_name"],
@@ -80,7 +86,7 @@ def test_real_selection_totals_rankings_and_company_shares(real_bundle):
     assert len(by_id) == 15 and by_id["C14"]["exposed_tiv_eur"] == by_id["C14"]["exposure_pct"] == 0
     assert by_id["C15"]["exposure_pct"] == 100
     highlighted = dispatch("highlight_sites", {"result_id": selected.result_id}, ctx)
-    assert highlighted.data["n_sites"] == 40
+    assert highlighted.data["n_sites"] == 43
     assert dispatch("zoom_map", {"result_id": highlighted.result_id}, ctx).status == "ok"
 
 

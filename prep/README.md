@@ -2,7 +2,9 @@
 
 Builds the app's data bundle in `data/`: the incident footprint, catalog and the synthetic portfolio. The
 curated edge cases are ordinary portfolio sites; `out/edge_cases.json` is the organiser answer key saying
-which is which.
+which is which. That report records the address-point quotas used to curate the
+teaching portfolio. App screening uses building intersections; its current reference
+answers are in `tests/expected.json`.
 
 For now the bundle has one incident, the Le Porge wildfire (EMSR899). The Garonne flood (EMSR866) is parked
 in `incidents.py` (`PARKED`); move it back into `INCIDENTS` to reactivate it.
@@ -51,7 +53,8 @@ After changing the footprint (step 1), rerun step 5; steps 2–4 only when candi
 
 ## Portfolio rules (build_portfolio.py)
 
-- 100 sites, 15 fictional companies (3–12 sites each); 40 sites inside the footprint.
+- 100 sites, 15 fictional companies (3–12 sites each); 40 address points inside the
+  footprint. Building-intersection screening affects 43 sites in the frozen bundle.
 - Sites have coordinates and a commune, **no street address**. `address` and `postcode` are empty and
   `city` is the commune name, so the app's column set is unchanged.
 - No two sites share a parcel: when site mode expands two candidates to the same estate, only the

@@ -10,10 +10,11 @@ from backend.app.tools.registry import ToolArgs, ToolContext, tool
 from backend.app.tools.result import ToolResult, dataset_result, frame_info, id_field, is_spatial
 
 DEFINITIONS = {
-    "inclusion": "A site is in an incident footprint if the footprint covers its address point, "
-                 "boundary included. Footprint polygons of one incident are unioned, so each site counts once.",
+    "inclusion": "A site is affected if any of its buildings intersects the incident footprint, including "
+                 "boundary contact, even if its map pinpoint is outside. Count each site_id once. "
+                 "Use address-point coverage only as an explicit fallback when no building dataset is available.",
     "tiv_eur": "Total insured value of a site = building + contents, in EUR. Business interruption is excluded.",
-    "exposed_tiv": "Sum of tiv_eur over the distinct sites in the footprint. This is a screening measure: "
+    "exposed_tiv": "Sum of the full tiv_eur of each distinct affected site, not prorated by intersected area. This is a screening measure: "
                    "it is not damage, loss, or an insurance payout.",
     "data": "Footprints are real (Copernicus EMS). Sites, companies and insured values are synthetic.",
 }

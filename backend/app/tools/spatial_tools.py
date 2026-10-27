@@ -37,7 +37,8 @@ class SpatialJoinArgs(ToolArgs):
 
 @tool(SpatialJoinArgs, description="""
 Match two spatial datasets using the specified left-to-right predicate, retaining left geometry.
-For sites in polygons, covered_by includes boundary sites; within excludes them.
+For affected sites use buildings on the left with intersects, even when a site's point is outside.
+For point-in-polygon queries, covered_by includes boundary points; within excludes them.
 Overlapping right polygons can repeat left rows: use distinct_rows on site_id before counts/TIV sums.
 """)
 def spatial_join(args: SpatialJoinArgs, ctx: ToolContext) -> ToolResult:

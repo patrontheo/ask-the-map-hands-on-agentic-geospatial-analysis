@@ -1,11 +1,14 @@
-"""Independent re-check of site selection: raw JSON/CSV, pyproj, pure-Python ray casting (no geopandas/shapely)."""
+"""Independent selection from raw data: building intersections, or ray casting for point-only fixtures."""
 
 import csv
 import json
 from pathlib import Path
 
+import numpy as np
 import pytest
 from pyproj import Transformer
+from shapely import transform
+from shapely.geometry import shape
 
 from backend.app.analysis import select_sites_in_incident
 from backend.app.data import REPO_ROOT, load_bundle
@@ -57,9 +60,23 @@ def independent_selection(data_dir: Path) -> dict[str, list[str]]:
     with open(data_dir / catalog["portfolio"]["sites"]) as f:
         sites = [(r["site_id"], *to_proj.transform(float(r["lon"]), float(r["lat"]))) for r in csv.DictReader(f)]
 
+    def projected(geometry):
+        return transform(shape(geometry), lambda coords: np.column_stack(to_proj.transform(coords[:, 0], coords[:, 1])))
+
+    building_path = catalog["portfolio"].get("buildings")
+    buildings = None
+    if building_path:
+        buildings = [(feature["properties"]["site_id"], projected(feature["geometry"]))
+                     for feature in json.loads((data_dir / building_path).read_text())["features"]]
+
     out = {}
     for meta in catalog["incidents"]:
         features = json.loads((data_dir / meta["path"]).read_text())["features"]
+        if buildings is not None:
+            footprint = [projected(feature["geometry"]) for feature in features]
+            out[meta["id"]] = sorted({site_id for site_id, building in buildings
+                                      if any(building.intersects(polygon) for polygon in footprint)})
+            continue
         polys = [[[to_proj.transform(*pt[:2]) for pt in ring] for ring in poly]
                  for feat in features for poly in polygons_of(feat["geometry"])]
         out[meta["id"]] = sorted(sid for sid, x, y in sites if any(polygon_covers(x, y, p) for p in polys))
