@@ -6,8 +6,6 @@ You will build a natural-language spatial analyst that screens a synthetic
 insurance portfolio against real flood and wildfire footprints, build reusable
 tools for the agent to compose, and make its execution visible in a trace pane.
 
-> Work in progress: the app, data and exercises are being built.
-
 ## Setup
 
 ```bash
@@ -37,14 +35,18 @@ each new operation as part of Step 1. Frontend regression
 checks use Node's built-in runner: `node --test tests/frontend.test.mjs` (Node 22+;
 only needed when developing the frontend).
 
-## Checkpoints
+## Steps
 
-| Branch | Stage |
-|--------|-------|
-| `step-00-starter` (= `main`) | Map, chat, tool framework with data access and map controls |
-| `step-01-tools` | Atomic tools built and composed by the agent |
-| `step-02-trace` | Trace pane |
-| `step-03-analysis` | Generated analysis and charts (stretch) |
+| Step | Stage |
+|------|-------|
+| 0 (`main`) | Map, chat, tool framework with data access and map controls |
+| 1 | Atomic tools built and composed by the agent |
+| 2 | Trace pane |
+| 3 | Generated analysis and charts (stretch) |
 
-Data: event footprints © Copernicus Emergency Management Service; the portfolio,
-companies and insured values are synthetic. See `data/LICENCES.md`.
+`main` is the Step 0 starter. Checkpoint branches for the later steps are not published yet.
+
+Data: event footprints © Copernicus Emergency Management Service (EMS), © 2026 European Union;
+communes (ADMIN EXPRESS) and buildings (BD TOPO) © IGN, Licence Ouverte 2.0. The portfolio,
+companies and insured values are synthetic. Sources and processing are listed in `data/catalog.json`
+and `prep/README.md`.
