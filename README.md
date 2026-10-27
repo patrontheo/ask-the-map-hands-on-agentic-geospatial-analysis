@@ -52,9 +52,12 @@ only needed when developing the frontend).
 | Step | Stage |
 |------|-------|
 | 0 (`main`) | Map, chat, tool framework with data access and map controls |
-| 1 (`step-01-tools`) | Atomic tools built and composed by the agent |
-| 2 (`step-02-trace`) | [Trace pane](exercises/step-02/README.md) |
+| 1 (`step-01-tools`) | [Calculation tools built and composed by the agent](exercises/step-01/README.md) |
+| 2 (`step-02-trace`) | [Trace pane and API cost tracking](exercises/step-02/README.md) |
 | 3 | Generated analysis and charts (stretch) |
+
+`main` is the Step 0 starter. Checkpoint implementations are available on
+`step-01-tools` and `step-02-trace`.
 
 The trace overlay shows ordered model/tool calls, statuses, per-step timings and
 total model/tool time. Expand a step for request details, output previews and errors.
