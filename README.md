@@ -22,12 +22,6 @@ a shareable report, then ask a question in the app to check live model access.
 The map has a plain background when basemap tiles are blocked. Reloading starts a
 fresh chat and map.
 
-The model uses `LLM_REASONING_EFFORT=low` by default for faster workshop answers.
-Set it to `medium` in your environment for more reasoning, or to an empty value
-to use the deployment default. Lower effort can reduce the manual baseline's
-accuracy. Follow-up geometry is loaded only when needed, and independent tools
-can run in one model round trip.
-
 The starter has seven tools: `describe_data`, `get_dataset`, `show_layer`,
 `hide_layer`, `highlight_sites`, `zoom_map` and `suggest_follow_ups`.
 Reading data keeps the map unchanged; displaying a layer or highlighting sites
