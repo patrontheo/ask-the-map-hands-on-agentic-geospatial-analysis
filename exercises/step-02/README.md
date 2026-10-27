@@ -1,5 +1,7 @@
 # Step 2 — see how the agent answered
 
+## 1. Build the trace pane
+
 Build a trace viewer for each assistant response. Add a small icon beside the
 response that opens a closable overlay pane showing the execution behind that answer.
 
@@ -18,3 +20,19 @@ Showing the completed trace is enough for this exercise; live updates are option
 
 Ask the same questions again and inspect their traces. Which tools did the agent
 use? How did their outputs contribute to the answer? Where was most of the time spent?
+
+## 2. Add cost tracking
+
+Once the pane works, extend it to show the estimated model API cost:
+
+- The total cost of producing that response at the top of the pane.
+- The individual cost of each model call.
+- A token breakdown: input, output, and cache reads/writes where reported by the API.
+
+Use the prices for the deployed model, make the pricing assumptions visible, and
+label the figures as estimates. Sum all model calls for the response total, avoiding
+double-counting cached input or reasoning tokens. Missing usage or unknown prices
+should appear as unavailable, not as zero cost.
+
+Re-ask the questions and compare costs. Which calls are most expensive? How much
+does caching help? Are the slowest steps also the most expensive?
