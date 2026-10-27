@@ -12,7 +12,9 @@ Ask these questions and record the answers:
 At this stage the assistant can load data and control the map. It has no computation
 tools: screening answers come from its own reasoning over the returned data and may
 be inaccurate, or the assistant may decline a calculation. Record these outcomes
-too, and inspect any highlighted sites and tables. Try the other questions in the
+too, and inspect any highlighted sites and answer tables. A site is affected when
+any of its buildings intersects the footprint, even if its pinpoint is outside;
+count each site and its full TIV once. Try the other questions in the
 app's prompt library, including the commune burnt-area questions.
 
 `describe_data` lists datasets and map layers. `get_dataset` reads attributes and

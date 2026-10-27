@@ -78,11 +78,26 @@ def _build_footprint(bundle: Bundle, incident) -> Footprint:
 
 def select_sites_in_incident(bundle: Bundle, incident_id: str) -> Selection:
     fp = incident_footprint(bundle, incident_id)
-    inside = bundle.sites_projected.map(fp.union_projected.covers)
-    site_ids = sorted(bundle.sites_projected.index[inside.astype(bool)])
+    if bundle.buildings is not None:
+        buildings = bundle.buildings.to_crs(bundle.crs_projected)
+        if "site_id" not in buildings:
+            raise AnalysisError("invalid_dataset", "Building geometry must have a site_id column.",
+                                "Link each building to its portfolio site.")
+        affected = buildings.geometry.map(make_valid).intersects(fp.union_projected)
+        site_ids = sorted(set(buildings.loc[affected, "site_id"]))
+        check_site_ids(bundle, site_ids)
+        basis = "building_intersection"
+        predicate = "intersects (any building; boundary contact included)"
+    else:
+        # Tiny teaching fixtures have no buildings; make the point approximation explicit.
+        inside = bundle.sites_projected.map(fp.union_projected.covers)
+        site_ids = sorted(bundle.sites_projected.index[inside.astype(bool)])
+        basis = "point_fallback"
+        predicate = "covers (point fallback; no building dataset)"
     return Selection(site_ids, len(site_ids), {
         "incident_id": incident_id,
-        "predicate": "covers (boundary counts as inside)",
+        "predicate": predicate,
+        "selection_basis": basis,
         "crs": bundle.crs_projected,
         "n_footprint_polygons": fp.n_polygons,
         "footprint_date": fp.meta.get("date"),

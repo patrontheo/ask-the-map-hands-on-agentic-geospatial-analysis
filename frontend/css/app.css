@@ -100,18 +100,6 @@ button { font: inherit; }
 
 @keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
 
-.result { margin-top: 10px; border: 1px solid var(--line); border-radius: var(--radius); font-size: 12.5px; background: var(--surface); overflow: hidden; }
-.result summary { padding: 7px 10px; cursor: pointer; color: var(--muted); font-weight: 600; }
-.result[open] summary { border-bottom: 1px solid var(--line); }
-.result.error summary { color: var(--error); }
-.result p { margin: 8px 10px; }
-.result-table-wrap { overflow: auto; max-height: 280px; }
-.result table { border-collapse: collapse; width: 100%; }
-.result th, .result td { padding: 5px 10px; text-align: left; white-space: nowrap; }
-.result tbody tr:nth-child(even) { background: #f7f8fa; }
-.result td.num, .result th.num { text-align: right; font-variant-numeric: tabular-nums; }
-.result th { background: var(--surface); position: sticky; top: 0; font-weight: 600; color: var(--muted); box-shadow: inset 0 -1px var(--line); }
-
 /* The input bar; the prompt library pops up above it, over the conversation, so the input never moves. */
 .composer-area { position: relative; flex-shrink: 0; }
 .prompt-library {

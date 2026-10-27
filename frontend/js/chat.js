@@ -2,7 +2,6 @@ import { api } from "./api.js";
 import { escapeHtml, renderMarkdown } from "./format.js";
 import { applyMapActions } from "./map.js";
 import { PROMPT_GROUPS } from "./prompts.js";
-import { renderResults } from "./results.js";
 
 export function initChat({ getSessionId }) {
   const form = document.getElementById("chat-form");
@@ -33,7 +32,6 @@ export function initChat({ getSessionId }) {
       const response = await api.chat(getSessionId(), message);
       pending.remove();
       const msg = addMessage("assistant", renderMarkdown(response.reply));
-      msg.append(renderResults(response.results));
       msg.append(renderFollowUps(response.results, ask));
       try {
         for (const result of response.results) await applyMapActions(result.map_actions);

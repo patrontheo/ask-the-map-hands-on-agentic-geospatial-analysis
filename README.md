@@ -33,12 +33,16 @@ The starter has seven tools: `describe_data`, `get_dataset`, `show_layer`,
 Reading data keeps the map unchanged; displaying a layer or highlighting sites
 keeps the camera unchanged. Zooming is an explicit operation.
 
+A site is affected when any of its buildings intersects the wildfire footprint,
+even if its map pinpoint is outside. Count each site's full TIV once. Chat shows
+the answer and follow-up questions; raw tool results are reserved for the trace pane.
+
 Start with [Step 0](exercises/step-00/README.md), then follow
 [Step 1](exercises/step-01/README.md) to build the atomic analysis tools.
 
 Run backend and reference checks with `uv run pytest`. Add acceptance tests for
 each new operation as part of Step 1. Frontend regression
-checks use Node's built-in runner: `node --test tests/frontend.test.mjs` (Node 22+;
+checks use Node's built-in runner: `node --test tests/*.test.mjs` (Node 22+;
 only needed when developing the frontend).
 
 ## Steps
