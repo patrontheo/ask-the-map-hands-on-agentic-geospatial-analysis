@@ -57,7 +57,7 @@ only needed when developing the frontend).
 |------|-------|
 | 0 (`main`) | Map, chat, tool framework with data access and map controls |
 | 1 (`step-01-tools`) | Atomic tools built and composed by the agent |
-| 2 | Trace pane |
+| 2 | [Trace pane](exercises/step-02/README.md) |
 | 3 | Generated analysis and charts (stretch) |
 
 The Step 2 trace pane has not been implemented yet. The backend already records

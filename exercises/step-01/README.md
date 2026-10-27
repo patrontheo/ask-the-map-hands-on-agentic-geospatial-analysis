@@ -23,3 +23,5 @@ These are examples; choose the tools you think the assistant needs.
 Reload the app and ask the same questions from Step 0 and the prompt library again.
 Compare the figures, rankings, highlighted sites and response times with your
 recorded baseline. Which answers changed, and why?
+
+Continue with [Step 2](../step-02/README.md) to make the agent's execution visible.
