@@ -44,8 +44,9 @@ class ToolContext:
         result = self.store.get(source)
         if result is not None:
             if result._frame is None:
-                raise AnalysisError("invalid_dataset", f"Result '{source}' contains no dataset.",
-                                    "Use get_dataset or a tool that returns a dataset result.")
+                raise AnalysisError("invalid_dataset", f"Result '{source}' ({result.tool}) contains no dataset.",
+                                    "Use a result_id from get_dataset or another tool that returns a dataset, "
+                                    "or pass layer_id/site_ids directly.")
             return result._frame.copy()
         if source.startswith("r_"):
             raise AnalysisError("unknown_result", f"No dataset result '{source}' in this session.",

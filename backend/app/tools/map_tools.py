@@ -73,10 +73,12 @@ def highlight_sites(args: SiteIdsArgs, ctx: ToolContext) -> ToolResult:
         return ToolResult.ok("Cleared the highlighted sites.", data={"n_sites": 0},
                              map_actions=[{"type": "clear_highlight"}])
     analysis.check_site_ids(ctx.bundle, site_ids)
+    # The highlighted sites stay reusable, e.g. zoom_map(result_id=...) on this result.
     return ToolResult.ok(
         f"Highlighted {len(site_ids)} site(s) on the map.",
         data={"site_ids": site_ids, "n_sites": len(site_ids)},
         map_actions=[{"type": "highlight_sites", "site_ids": site_ids}],
+        frame=ctx.get_frame("sites").loc[site_ids],
     )
 
 

@@ -43,6 +43,12 @@ def test_layers_and_geojson(client):
     assert not any(l["id"].startswith("simplified:") for l in layers.values())
 
 
+def test_frontend_files_are_revalidated_on_reload(client):
+    for path in ("/", "/js/results.js"):
+        r = client.get(path)
+        assert r.status_code == 200 and r.headers["cache-control"] == "no-cache"
+
+
 STARTER_TOOLS = {"describe_data", "get_dataset", "show_layer", "highlight_sites",
                  "zoom_map", "hide_layer", "suggest_follow_ups"}
 REMOVED_TOOLS = {"select_sites_in_incident", "summarize_sites", "distance_between_sites",

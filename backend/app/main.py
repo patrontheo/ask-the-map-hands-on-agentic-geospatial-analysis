@@ -18,6 +18,14 @@ async def lifespan(app: FastAPI):
     yield
 
 
+class FrontendFiles(StaticFiles):
+    """Revalidate on every load so frontend edits show up after a plain reload."""
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
 app = FastAPI(title="Ask the Map", lifespan=lifespan)
 app.include_router(router)
-app.mount("/", StaticFiles(directory=REPO_ROOT / "frontend", html=True), name="frontend")
+app.mount("/", FrontendFiles(directory=REPO_ROOT / "frontend", html=True), name="frontend")

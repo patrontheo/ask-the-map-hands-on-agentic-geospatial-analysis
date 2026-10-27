@@ -126,6 +126,14 @@ def test_highlight_and_zoom_can_consume_dataset_results(ctx):
     assert zoomed.map_actions[0]["bbox"] == list(ctx.bundle.sites.total_bounds)
 
 
+def test_highlighted_sites_can_be_zoomed_to_by_result_id(ctx):
+    highlighted = dispatch("highlight_sites", {"site_ids": ["S01", "S03"]}, ctx)
+    zoomed = dispatch("zoom_map", {"result_id": highlighted.result_id}, ctx)
+    assert zoomed.status == "ok"
+    assert zoomed.map_actions[0]["bbox"] == list(ctx.bundle.sites.loc[["S01", "S03"]].total_bounds)
+    assert highlighted.table is None  # display tool: nothing extra under the answer
+
+
 def test_zoom_converts_projected_results_to_map_coordinates(ctx):
     result = ToolResult.ok("Projected intermediate", frame=ctx.bundle.sites.to_crs(ctx.bundle.crs_projected))
     result.result_id = ctx.store.next_id()
