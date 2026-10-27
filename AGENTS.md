@@ -39,4 +39,4 @@ Credentials live in `.env` (copy `.env.example`). Never print, log, or commit th
 
 - Do not edit `tests/expected.json` or existing acceptance tests to make them pass. Add new tests next to them.
 - Keep changes small and readable; participants must be able to explain them.
-- Write a short spec before larger changes (see `exercises/step-01/SPEC_PROMPT.md`).
+- Keep exercise instructions focused on the goal; participants choose how to implement their tools.

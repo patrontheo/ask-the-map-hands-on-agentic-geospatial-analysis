@@ -3,7 +3,7 @@
 Workshop repository for the AXA Data Science Summit, Amsterdam, 3 November 2026.
 
 You will build a natural-language spatial analyst that screens a synthetic
-insurance portfolio against real flood and wildfire footprints, build reusable
+insurance portfolio against a real wildfire footprint, build reusable
 tools for the agent to compose, and make its execution visible in a trace pane.
 
 ## Setup
