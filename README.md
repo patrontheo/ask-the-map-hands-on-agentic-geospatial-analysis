@@ -25,11 +25,6 @@ a shareable report, then ask a question in the app to check live model access.
 The map has a plain background when basemap tiles are blocked. Reloading starts a
 fresh chat and map.
 
-The model uses `LLM_REASONING_EFFORT=low` by default for faster workshop answers.
-Set it to `medium` in your environment for more reasoning, or to an empty value
-to use the deployment default. Calculations run in Python using full-precision data;
-geometry stays in the backend. Independent tools can share one model round trip.
-
 The seven data/map/UI tools are `describe_data`, `get_dataset`, `show_layer`,
 `hide_layer`, `highlight_sites`, `zoom_map` and `suggest_follow_ups`. This branch adds
 `filter_rows`, `spatial_join`, `distinct_rows`, `intersect_geometries`, `measure_area`,
