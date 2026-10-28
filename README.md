@@ -7,7 +7,12 @@ insurance portfolio and a real wildfire footprint.
 
 ## Setup
 
+Clone the starter branch, then install the dependencies:
+
 ```bash
+git clone --depth 1 --single-branch --branch main \
+  https://github.com/patrontheo/ask-the-map-hands-on-agentic-geospatial-analysis.git ask-the-map-workshop
+cd ask-the-map-workshop
 uv sync
 cp .example.env .env
 ```
