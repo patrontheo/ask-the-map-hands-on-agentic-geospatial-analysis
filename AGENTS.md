@@ -13,7 +13,7 @@ uv run uvicorn backend.app.main:app --reload
 uv run pytest
 ```
 
-Credentials live in `.env` (copy `.env.example`). Never print, log, or commit them.
+Credentials live in `.env` (copy `.example.env`). Never print, log, or commit them.
 
 ## How the app is organised
 

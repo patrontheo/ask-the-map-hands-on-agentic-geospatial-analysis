@@ -8,7 +8,7 @@ from backend.app import config
 @lru_cache(maxsize=1)
 def client() -> OpenAI:
     if not (config.LLM_BASE_URL and config.LLM_API_KEY and config.LLM_MODEL):
-        raise RuntimeError("Set LLM_BASE_URL, LLM_API_KEY and LLM_MODEL in .env (see .env.example).")
+        raise RuntimeError("Set LLM_BASE_URL, LLM_API_KEY and LLM_MODEL in .env (see .example.env).")
     return OpenAI(base_url=config.LLM_BASE_URL, api_key=config.LLM_API_KEY, timeout=config.LLM_TIMEOUT_S)
 
 
