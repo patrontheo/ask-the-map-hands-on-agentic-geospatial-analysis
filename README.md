@@ -10,12 +10,17 @@ tools for the agent to compose, and make its execution visible in a trace pane.
 
 ```bash
 uv sync
-cp .env.example .env   # then fill in LLM_API_KEY
+cp .example.env .env   # then fill in LLM_BASE_URL, LLM_API_KEY and LLM_MODEL
 uv run python scripts/setup_check.py
 uv run uvicorn backend.app.main:app --reload
 ```
 
 Open http://localhost:8000.
+
+Need a coding assistant without a subscription? Follow the
+[coding assistant setup](coding-assistant/README.md) to use Codex CLI (Luna) or
+Claude Code (Haiku) with the workshop endpoints and the same root `.env` file.
+The organisers provide endpoint URLs, deployment names and API keys privately.
 
 The setup check runs offline and never displays credential values. Use `--json` for
 a shareable report, then ask a question in the app to check live model access.

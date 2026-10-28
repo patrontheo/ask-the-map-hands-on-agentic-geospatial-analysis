@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Codex CLI using the workshop's Luna deployment on Azure AI Foundry.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=_load_env.sh
+. "$SCRIPT_DIR/_load_env.sh"
+load_config luna
+
+command -v codex >/dev/null || { echo "error: codex CLI not found on PATH; see coding-assistant/README.md" >&2; exit 1; }
+
+# TOML literal strings keep the URL literal. URLs must not contain these characters.
+case "$LUNA_OPENAI_BASE_URL" in
+  *\'*|*$'\n'*|*$'\r'*) echo "error: invalid LUNA_OPENAI_BASE_URL in .env" >&2; exit 1 ;;
+esac
+
+cd "$REPO_ROOT"
+exec codex \
+  -c 'model_provider="luna"' \
+  -c "model_providers.luna={name='Luna (Azure)', base_url='$LUNA_OPENAI_BASE_URL', env_key='AZURE_FOUNDRY_API_KEY', wire_api='responses', requires_openai_auth=false}" \
+  -m "$LUNA_DEPLOYMENT" \
+  "$@"
