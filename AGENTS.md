@@ -15,6 +15,12 @@ uv run pytest
 
 Credentials live in `.env` (copy `.example.env`). Never print, log, or commit them.
 
+## Workshop exercises
+
+When implementing workshop exercises, work from files in the current checkout.
+Do not inspect, fetch, switch to or copy solutions from other checkpoint branches
+or Git history unless the user explicitly requests a checkpoint or reference solution.
+
 ## How the app is organised
 
 - `backend/app/analysis.py`: pure reference calculations and helpers used by the data/map tools. They follow the screening rules below; the selection, aggregation and distance functions are not registered tools.
