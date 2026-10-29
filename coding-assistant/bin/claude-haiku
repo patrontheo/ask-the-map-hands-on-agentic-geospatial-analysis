@@ -5,9 +5,37 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=_load_env.sh
 . "$SCRIPT_DIR/_load_env.sh"
-load_config haiku
 
-command -v claude >/dev/null || { echo "error: claude CLI not found on PATH; see coding-assistant/README.md" >&2; exit 1; }
+FIRST_CLAUDE_BIN="$(type -P claude)" || { echo "error: claude CLI not found on PATH; see coding-assistant/README.md" >&2; exit 1; }
+
+# A native installation can shadow a newer Homebrew installation. Use the first
+# supported executable on PATH; Haiku 5.5 support starts at Claude Code 2.1.293.
+CLAUDE_BIN=""
+while IFS= read -r candidate; do
+  version="$("$candidate" --version 2>/dev/null)" || continue
+  if [[ "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
+    major="${BASH_REMATCH[1]}" minor="${BASH_REMATCH[2]}" patch="${BASH_REMATCH[3]}"
+    if (( major > 2 || (major == 2 && minor > 1) || (major == 2 && minor == 1 && patch >= 293) )); then
+      CLAUDE_BIN="$candidate"
+      break
+    fi
+  fi
+done < <(type -aP claude)
+
+if [ -z "$CLAUDE_BIN" ]; then
+  echo "error: Claude Code 2.1.293 or later is required for Haiku 5.5." >&2
+  printf '       First executable on PATH: %s\n' "$FIRST_CLAUDE_BIN" >&2
+  echo "       Update it or put a newer installation first on PATH; see coding-assistant/README.md." >&2
+  exit 1
+fi
+if [ "$CLAUDE_BIN" != "$FIRST_CLAUDE_BIN" ]; then
+  printf 'Using %s (%s); skipped older Claude installations on PATH.\n' "$CLAUDE_BIN" "$version" >&2
+fi
+
+if [ "$#" -eq 1 ] && [ "$1" = --version ]; then
+  exec "$CLAUDE_BIN" --version
+fi
+load_config haiku
 
 # Clear competing providers and credentials before selecting Microsoft Foundry.
 unset CLAUDE_CODE_USE_BEDROCK CLAUDE_CODE_USE_VERTEX CLAUDE_CODE_USE_MANTLE CLAUDE_CODE_USE_ANTHROPIC_AWS \
@@ -29,4 +57,6 @@ export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
 
 unset AZURE_FOUNDRY_API_KEY
 cd "$REPO_ROOT"
-exec claude "$@"
+# Claude loads saved settings after inheriting this environment. Pin provider
+# selection at CLI scope so a saved Bedrock/Vertex setting cannot take over.
+exec "$CLAUDE_BIN" --settings '{"env":{"CLAUDE_CODE_USE_FOUNDRY":"1","CLAUDE_CODE_USE_BEDROCK":"","CLAUDE_CODE_USE_VERTEX":"","CLAUDE_CODE_USE_MANTLE":"","CLAUDE_CODE_USE_ANTHROPIC_AWS":""}}' "$@"
