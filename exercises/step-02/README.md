@@ -60,9 +60,9 @@ Cache reads and writes are part of input tokens, and reasoning tokens are part o
 output tokens: do not count them twice. Missing usage must display as unavailable,
 not zero.
 
-## If you finish early
+## Stretch goal
 
-Optional ideas that practise more GIS:
+If you finish early, try one of these optional ideas that practise more GIS:
 
 - Export the affected sites as GeoJSON, open the file in QGIS and compare it with
   the app's map. No coding needed for the comparison.
