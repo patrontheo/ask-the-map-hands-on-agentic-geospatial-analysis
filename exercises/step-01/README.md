@@ -9,9 +9,10 @@ results remain shared.
 1. Ask your coding assistant which calculation tools the app needs to answer the
    three example questions. Ask for small, reusable tools that the app's agent can
    chain, not one tool per question, and no code yet.
-2. Review its plan. Check the CRS and units, buildings rather than location pins,
-   boundary contact, each site counted once, and the full-portfolio denominator.
-   The screening rules and the tool contracts are in `AGENTS.md`.
+2. Review its plan and find at least one thing to correct or make more precise.
+   Check the CRS and units, buildings rather than location pins, boundary contact,
+   each site counted once, and the full-portfolio denominator. The screening rules
+   and the tool contracts are in `AGENTS.md`.
 3. Ask it to implement the tools.
 
 ## Verify the results
