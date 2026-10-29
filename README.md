@@ -92,6 +92,13 @@ Install everything beforehand; setup during the session only pulls the latest ch
 Different coding assistants may produce different tools and interfaces; shared
 geometry rules, selected sites and numeric checks remain the same.
 
+## After the workshop
+
+The workshop endpoints and keys are for the session only. To keep using the app,
+put your own OpenAI-compatible Responses API endpoint, key and model in `.env`
+(`LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`). The coding assistants work with
+your own subscriptions without the launchers.
+
 ## Data
 
 Event footprints © Copernicus Emergency Management Service (EMS), © 2026 European Union;

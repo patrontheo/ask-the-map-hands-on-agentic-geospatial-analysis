@@ -38,6 +38,8 @@ A trace makes execution visible; correct-looking calls still need correct data
 and calculations. Compare the answer with the facilitator's reference.
 
 Check close/reopen, an older answer, keyboard access and an empty/error trace.
+Open a trace in your browser and check its timings and cost. If something is wrong
+or unavailable, tell your assistant what you see and let it fix it.
 If blocked, save progress and ask a facilitator for recovery help.
 
 ## Cost tracking
