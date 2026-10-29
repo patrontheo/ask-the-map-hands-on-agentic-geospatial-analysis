@@ -14,10 +14,23 @@ case "$LUNA_OPENAI_BASE_URL" in
   *\'*|*$'\n'*|*$'\r'*) echo "error: invalid LUNA_OPENAI_BASE_URL in .env" >&2; exit 1 ;;
 esac
 
+# Workshop default: no approval prompts. Commands run in the workspace sandbox and
+# requests to leave it go to Codex's automatic review. ASSISTANT_AUTO=0 asks instead.
+AUTO_ARGS=()
+if [ "${ASSISTANT_AUTO:-1}" != 0 ]; then
+  CODEX_HELP="$(codex --help)"
+  if [[ "$CODEX_HELP" == *"--approve-for-me"* ]]; then
+    AUTO_ARGS=(--approve-for-me)
+  elif [[ "$CODEX_HELP" == *"--full-auto"* ]]; then
+    AUTO_ARGS=(--full-auto)
+  fi
+fi
+
 cd "$REPO_ROOT"
 exec codex \
   -c 'model_provider="luna"' \
   -c "model_providers.luna={name='Luna (Azure)', base_url='$LUNA_OPENAI_BASE_URL', env_key='AZURE_FOUNDRY_API_KEY', wire_api='responses', requires_openai_auth=false}" \
   -c 'model_reasoning_effort="medium"' \
+  ${AUTO_ARGS[@]+"${AUTO_ARGS[@]}"} \
   -m "$LUNA_DEPLOYMENT" \
   "$@"
