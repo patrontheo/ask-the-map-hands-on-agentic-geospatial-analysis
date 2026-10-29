@@ -17,8 +17,14 @@ class FakeMap {
   sources = new Map();
   layers = new Map();
   fits = [];
+  handlers = new Map();
   constructor(options) { FakeMap.instance = this; this.options = options; }
-  on(name, callback) { if (name === "load") queueMicrotask(() => { this.loaded = true; callback(); }); }
+  on(name, callback) {
+    if (!this.handlers.has(name)) this.handlers.set(name, []);
+    this.handlers.get(name).push(callback);
+    if (name === "load") queueMicrotask(() => { this.loaded = true; callback(); });
+  }
+  emit(name, event) { for (const handler of this.handlers.get(name) ?? []) handler(event); }
   addControl(control) {
     if (!control.isAttribution) return;
     assert.ok(this.loaded, "Attribution is added after the initial map load");
@@ -80,7 +86,7 @@ async function setupMap(t, { shapes = {}, beforeFetch = async () => {} } = {}) {
   };
   const api = await import(new URL(`../frontend/js/map.js?test=${++moduleId}`, import.meta.url));
   await api.initMap("map");
-  return { ...api, map: FakeMap.instance, counts };
+  return { ...api, map: FakeMap.instance, counts, elements };
 }
 
 // Evaluate the small set of style expressions used for point opacity.
@@ -171,4 +177,39 @@ test("fixture points and highlights remain visible at close zoom", async (t) => 
     assert.equal(evaluate(app.map.getLayer(id).paint["circle-opacity"], { siteId: "S01", zoom: 18 }), 1);
   }
   assert.deepEqual(app.map.getLayer("sites-highlight").filter.at(-1), ["literal", ["S01"]]);
+});
+
+test("basemap changes preserve source layers, highlights and camera", async (t) => {
+  const api = await setupMap(t, { shapes: { buildings: collection(["S01"], "Polygon"), parcels: collection(["S01"], "Polygon") } });
+  await api.showOverview();
+  await api.applyMapActions([{ type: "highlight_sites", site_ids: ["S01"] }]);
+  const sites = api.map.getLayer("sites");
+  const highlight = structuredClone(api.map.getLayer("sites-highlight").filter);
+  const fits = api.map.fits.length;
+  api.setBasemap("satellite");
+  assert.equal(api.map.getLayer("satellite-imagery-layer").layout.visibility, "visible");
+  assert.match(api.map.getSource("satellite-imagery").attribution, /Esri/);
+  api.setBasemap("data");
+  assert.equal(api.map.getLayer("satellite-imagery-layer").layout.visibility, "none");
+  api.setBasemap("street");
+  api.setBasemap("satellite"); // Reuse the raster source rather than adding it twice.
+  assert.equal(api.map.getLayer("sites"), sites);
+  assert.deepEqual(api.map.getLayer("sites-highlight").filter, highlight);
+  assert.equal(api.map.fits.length, fits);
+  assert.equal(api.map.getLayer("site-buildings-fill").layout.visibility, "visible");
+});
+
+
+test("satellite failures leave data visible and inactive errors cannot hide a new basemap", async (t) => {
+  const api = await setupMap(t);
+  await api.showOverview();
+  api.setBasemap("satellite");
+  for (let i=0; i<4; i++) api.map.emit("error", {sourceId:"satellite-imagery"});
+  assert.equal(api.map.getLayer("satellite-imagery-layer").layout.visibility, "none");
+  assert.equal(api.elements.get("map-notice").hidden, false);
+  assert.match(api.elements.get("map-notice").textContent, /Choose Street or Data only/);
+  assert.equal(api.map.getLayer("sites").layout.visibility, "visible");
+  api.setBasemap("data");
+  for (let i=0; i<5; i++) api.map.emit("error", {sourceId:"satellite-imagery"});
+  assert.equal(api.elements.get("map-notice").hidden, true);
 });
