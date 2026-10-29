@@ -83,9 +83,10 @@ endpoints and the same `.env` file. No personal subscription is required.
 
 ## Workshop route
 
-The session lasts two hours, including coding: 25 minutes introduction, 10 baseline,
-40 calculation tools, 10 verification, 25 trace viewer and 10 discussion. Cost
-tracking and generated analysis are optional. Setup should be complete beforehand.
+The session lasts two hours: 25 minutes introduction, 10 workshop and baseline demo,
+15 setup and 5 exploring the baseline, 20 for Step 1 (15 coding), 23 for Step 2
+(20 coding), then the final app and closing. Generated analysis is optional.
+Install everything beforehand; setup during the session only pulls the latest changes.
 Different coding assistants may produce different tools and interfaces; shared
 geometry rules, selected sites and numeric checks remain the same.
 

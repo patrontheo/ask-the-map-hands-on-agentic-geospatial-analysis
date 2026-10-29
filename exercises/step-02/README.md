@@ -4,8 +4,8 @@
 
 Build a trace viewer attached to each assistant response. Use a clearly labelled **Show trace** control that opens a closable pane.
 The backend already returns events and tool results; inspect their contract first.
-The first target is a working viewer for completed answers. Live updates, charts,
-pricing and broad UI redesign are outside the core task.
+The target is a working viewer for completed answers that also shows what each
+answer cost. Live updates, charts and broad UI redesign are outside the task.
 
 Show a readable sequence containing:
 
@@ -40,13 +40,30 @@ and calculations. Compare the answer with the facilitator's reference.
 Check close/reopen, an older answer, keyboard access and an empty/error trace.
 If blocked, save progress and ask a facilitator for recovery help.
 
-## Optional: cost tracking
+## Cost tracking
 
-Only after the core viewer and evidence checks work, add an estimated model cost.
-Use organiser-verified prices for the deployed model, with date, currency and SKU.
-Do not spend the timed exercise researching prices independently.
+Add an estimated API cost to the trace. Use these prices; do not research others.
+
+`gpt-6-luna`, Standard tier, USD per million tokens, checked 27 October 2026
+([published prices](https://developers.openai.com/api/docs/models/gpt-6-luna)):
+
+| Token type          | USD / 1M |
+| ------------------- | -------: |
+| Input               |     0.10 |
+| Cache read          |     0.01 |
+| Cache write, 30 min |    0.125 |
+| Cache write, 12 h   |     0.25 |
+| Output              |     0.50 |
 
 Show the response total, individual model-call costs and API-reported token usage.
-Avoid double-counting cached input or reasoning tokens already included in output.
-Missing usage or unknown prices must display as unavailable, not zero. Explain any
-cache categories used. Cost tracking is outside the mandatory two-hour route.
+Cache reads and writes are part of input tokens, and reasoning tokens are part of
+output tokens: do not count them twice. Missing usage must display as unavailable,
+not zero.
+
+## If you finish early
+
+Optional ideas that practise more GIS:
+
+- Find the sites within 1 km of the burnt area, measuring distance in metres.
+- Measure the burnt area of each commune, in hectares.
+- Export the affected sites as GeoJSON and open them in another tool.
