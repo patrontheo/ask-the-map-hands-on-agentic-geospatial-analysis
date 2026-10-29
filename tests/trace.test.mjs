@@ -195,3 +195,28 @@ test("explicit zero and tiny positive costs are shown accurately", (t) => {
   assert.doesNotMatch(content.innerHTML, /<script>/);
   assert.match(content.innerHTML, /&lt;script&gt;/);
 });
+
+test("missing recorded durations remain unavailable rather than zero", (t) => {
+  const { content } = setupDom(t);
+  const turn = response();
+  turn.trace.find((event) => event.type === "llm_response").duration_ms = null;
+  const trace = buildTrace(turn);
+  assert.equal(trace.modelMs, null);
+  assert.equal(trace.toolMs, 2.5);
+  createTraceButton("Missing timing", turn).click();
+  assert.match(content.innerHTML, /Unavailable/);
+});
+
+test("returned records have a readable table before expandable raw metadata", (t) => {
+  const { content } = setupDom(t);
+  const turn = response();
+  turn.results[0].table = { columns:[{name:"n_sites"},{name:"exposed_tiv_eur"}],
+    rows:[{n_sites:43,exposed_tiv_eur:47655000}], total_rows:1 };
+  const button = createTraceButton("Inspect the totals", turn);
+  assert.equal(button.textContent, "Show trace");
+  button.click();
+  assert.match(content.innerHTML, /Returned data<\/h3>/);
+  assert.match(content.innerHTML, /<th>n_sites<\/th>/);
+  assert.match(content.innerHTML, /<td>43<\/td>/);
+  assert.match(content.innerHTML, /Arguments and raw result/);
+});
