@@ -57,8 +57,9 @@ Add an estimated API cost to the trace. Use these prices; do not research others
 
 Show the response total, individual model-call costs and API-reported token usage.
 Cache reads and writes are part of input tokens, and reasoning tokens are part of
-output tokens: do not count them twice. Missing usage must display as unavailable,
-not zero.
+output tokens: do not count them twice. The API reports `cache_write_tokens`
+without a lifetime; price them at the 30-minute rate. Missing usage must display
+as unavailable, not zero.
 
 ## Stretch goal
 

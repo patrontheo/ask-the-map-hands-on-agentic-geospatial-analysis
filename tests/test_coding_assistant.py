@@ -45,7 +45,6 @@ print(json.dumps({"args": arguments, "env": environment, "cwd": os.getcwd(), "ex
     stub = f'#!/bin/sh\nexec {shlex.quote(sys.executable)} -c {shlex.quote(stub_code)} "$0" "$@"\n'
     (stub_dir / "version.txt").write_text("2.1.308 (Claude Code)\n")
     (stub_dir / "opencode-help.txt").write_text("opencode [project]\n--model string\n")
-    (stub_dir / "codex-help.txt").write_text("codex [PROMPT]\n--approve-for-me\n")
     (stub_dir / "claude-help.txt").write_text('--permission-mode <mode> (choices: "acceptEdits", "auto")\n')
     for cli in ("codex", "claude", "opencode"):
         path = stub_dir / cli
@@ -81,7 +80,8 @@ LUNA_DEPLOYMENT=luna-test
     assert result.returncode == 0, result.stderr
     child = json.loads(result.stdout)
     assert child["cwd"] == str(repo)
-    assert child["args"][-5:] == ["--approve-for-me", "-m", "luna-test", "exec", "Reply with exactly: OK"]
+    assert child["args"][-8:] == ["--sandbox", "workspace-write", "--ask-for-approval", "never",
+                                  "-m", "luna-test", "exec", "Reply with exactly: OK"]
     assert tomllib.loads(child["args"][5])["model_reasoning_effort"] == "medium"
     provider = tomllib.loads(child["args"][3])["model_providers"]["luna"]
     assert provider["base_url"] == "https://example.invalid/openai/v1"
@@ -206,15 +206,10 @@ HAIKU_DEPLOYMENT=haiku-test
         assert key not in environment
 
 
-@pytest.mark.parametrize("script, help_text, expected", [
-    ("codex-luna", "codex [PROMPT]\n--full-auto\n", ["--full-auto"]),
-    ("codex-luna", "codex [PROMPT]\n", []),
-    ("claude-haiku", "--permission-mode <mode> (choices: \"acceptEdits\")\n", ["--permission-mode", "acceptEdits"]),
-])
-def test_auto_mode_falls_back_on_older_clis(launch, script, help_text, expected):
+def test_haiku_auto_mode_falls_back_to_accept_edits(launch):
     run, repo = launch
-    (repo.parent / "cli" / f"{script.split('-')[0]}-help.txt").write_text(help_text)
-    result = run(script, """
+    (repo.parent / "cli" / "claude-help.txt").write_text('--permission-mode <mode> (choices: "acceptEdits")\n')
+    result = run("claude-haiku", """
 LLM_API_KEY=dummy-key
 LLM_BASE_URL=https://example.invalid/openai/v1
 LUNA_DEPLOYMENT=luna-test
@@ -223,11 +218,8 @@ HAIKU_DEPLOYMENT=haiku-test
 """, args=("-p", "OK"))
     assert result.returncode == 0, result.stderr
     args = json.loads(result.stdout)["args"]
-    for flag in ("--approve-for-me", "--full-auto", "--permission-mode"):
-        assert (flag in args) == (flag in expected)
-    if expected:
-        start = args.index(expected[0])
-        assert args[start:start + len(expected)] == expected
+    start = args.index("--permission-mode")
+    assert args[start:start + 2] == ["--permission-mode", "acceptEdits"]
 
 
 @pytest.mark.parametrize("script", ["codex-luna", "claude-haiku"])
@@ -242,7 +234,7 @@ HAIKU_DEPLOYMENT=haiku-test
 """, overrides={"ASSISTANT_AUTO": "0"}, args=("-p", "OK"))
     assert result.returncode == 0, result.stderr
     args = json.loads(result.stdout)["args"]
-    assert not {"--approve-for-me", "--full-auto", "--permission-mode"} & set(args)
+    assert not {"--sandbox", "--ask-for-approval", "--permission-mode"} & set(args)
 
 
 def test_exported_values_override_file_and_shell_text_is_literal(launch):
