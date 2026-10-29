@@ -2,8 +2,7 @@
 
 ## Completed trace first
 
-Ask your coding assistant to build a trace viewer attached to each assistant
-response. Use a clearly labelled **Show trace** control that opens a closable pane.
+Build a trace viewer attached to each assistant response. Use a clearly labelled **Show trace** control that opens a closable pane.
 The backend already returns events and tool results; inspect their contract first.
 The first target is a working viewer for completed answers. Live updates, charts,
 pricing and broad UI redesign are outside the core task.
@@ -21,8 +20,8 @@ own trace. Keep the question visible. A request event contains metadata, not the
 complete model input. Do not invent private thoughts or explanations of why the
 model chose a tool. Display only recorded information.
 
-Restart the server as described in Step 1, wait for startup, and refresh the app.
-Save any answers you need before refreshing.
+Wait for automatic backend reload after Python changes, then refresh the app.
+Use the restart fallback in Step 1 if needed. Save answers before refreshing.
 
 ## Run and interpret
 
@@ -39,10 +38,7 @@ A trace makes execution visible; correct-looking calls still need correct data
 and calculations. Compare the answer with the facilitator's reference.
 
 Check close/reopen, an older answer, keyboard access and an empty/error trace.
-After these checks pass, stop implementation and spend the remaining time
-interpreting the evidence. If behind at the facilitator checkpoint, save progress
-and ask for recovery help. While code runs, inspect a recorded event and identify
-the field that connects it to its result.
+If blocked, save progress and ask a facilitator for recovery help.
 
 ## Optional: cost tracking
 
