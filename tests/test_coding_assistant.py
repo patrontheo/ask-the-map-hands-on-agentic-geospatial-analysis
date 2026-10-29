@@ -35,8 +35,8 @@ arguments = sys.argv[2:]
 if arguments == ["--version"]:
     print(Path(sys.argv[1]).with_name("version.txt").read_text().strip())
     raise SystemExit(0)
-if arguments == ["--help"] and Path(sys.argv[1]).name == "opencode":
-    print(Path(sys.argv[1]).with_name("opencode-help.txt").read_text())
+if arguments == ["--help"]:
+    print(Path(sys.argv[1]).with_name(Path(sys.argv[1]).name + "-help.txt").read_text())
     raise SystemExit(0)
 environment = {key: value for key, value in os.environ.items()
                if key in settings or key.startswith(("FILE_", "ANTHROPIC_", "CLAUDE_", "OPENCODE_"))}
@@ -45,6 +45,8 @@ print(json.dumps({"args": arguments, "env": environment, "cwd": os.getcwd(), "ex
     stub = f'#!/bin/sh\nexec {shlex.quote(sys.executable)} -c {shlex.quote(stub_code)} "$0" "$@"\n'
     (stub_dir / "version.txt").write_text("2.1.308 (Claude Code)\n")
     (stub_dir / "opencode-help.txt").write_text("opencode [project]\n--model string\n")
+    (stub_dir / "codex-help.txt").write_text("codex [PROMPT]\n--approve-for-me\n")
+    (stub_dir / "claude-help.txt").write_text('--permission-mode <mode> (choices: "acceptEdits", "auto")\n')
     for cli in ("codex", "claude", "opencode"):
         path = stub_dir / cli
         path.write_text(stub)
@@ -79,7 +81,7 @@ LUNA_DEPLOYMENT=luna-test
     assert result.returncode == 0, result.stderr
     child = json.loads(result.stdout)
     assert child["cwd"] == str(repo)
-    assert child["args"][-4:] == ["-m", "luna-test", "exec", "Reply with exactly: OK"]
+    assert child["args"][-5:] == ["--approve-for-me", "-m", "luna-test", "exec", "Reply with exactly: OK"]
     assert tomllib.loads(child["args"][5])["model_reasoning_effort"] == "medium"
     provider = tomllib.loads(child["args"][3])["model_providers"]["luna"]
     assert provider["base_url"] == "https://example.invalid/openai/v1"
@@ -175,7 +177,7 @@ HAIKU_DEPLOYMENT=haiku-test
     assert result.returncode == 0, result.stderr
     child = json.loads(result.stdout)
     assert child["args"][0] == "--settings"
-    assert child["args"][2:] == ["--effort", "medium", "-p", "Reply with exactly: OK"]
+    assert child["args"][2:] == ["--effort", "medium", "--permission-mode", "auto", "-p", "Reply with exactly: OK"]
     # Claude applies saved settings after the shell environment. CLI settings
     # must also pin the provider to override a saved Bedrock/Vertex selection.
     provider_settings = json.loads(child["args"][1])["env"]
@@ -202,6 +204,45 @@ HAIKU_DEPLOYMENT=haiku-test
         "CLAUDE_CODE_EFFORT_LEVEL",
     ):
         assert key not in environment
+
+
+@pytest.mark.parametrize("script, help_text, expected", [
+    ("codex-luna", "codex [PROMPT]\n--full-auto\n", ["--full-auto"]),
+    ("codex-luna", "codex [PROMPT]\n", []),
+    ("claude-haiku", "--permission-mode <mode> (choices: \"acceptEdits\")\n", ["--permission-mode", "acceptEdits"]),
+])
+def test_auto_mode_falls_back_on_older_clis(launch, script, help_text, expected):
+    run, repo = launch
+    (repo.parent / "cli" / f"{script.split('-')[0]}-help.txt").write_text(help_text)
+    result = run(script, """
+LLM_API_KEY=dummy-key
+LLM_BASE_URL=https://example.invalid/openai/v1
+LUNA_DEPLOYMENT=luna-test
+HAIKU_ANTHROPIC_BASE_URL=https://example.invalid/anthropic
+HAIKU_DEPLOYMENT=haiku-test
+""", args=("-p", "OK"))
+    assert result.returncode == 0, result.stderr
+    args = json.loads(result.stdout)["args"]
+    for flag in ("--approve-for-me", "--full-auto", "--permission-mode"):
+        assert (flag in args) == (flag in expected)
+    if expected:
+        start = args.index(expected[0])
+        assert args[start:start + len(expected)] == expected
+
+
+@pytest.mark.parametrize("script", ["codex-luna", "claude-haiku"])
+def test_auto_mode_can_be_turned_off(launch, script):
+    run, _ = launch
+    result = run(script, """
+LLM_API_KEY=dummy-key
+LLM_BASE_URL=https://example.invalid/openai/v1
+LUNA_DEPLOYMENT=luna-test
+HAIKU_ANTHROPIC_BASE_URL=https://example.invalid/anthropic
+HAIKU_DEPLOYMENT=haiku-test
+""", overrides={"ASSISTANT_AUTO": "0"}, args=("-p", "OK"))
+    assert result.returncode == 0, result.stderr
+    args = json.loads(result.stdout)["args"]
+    assert not {"--approve-for-me", "--full-auto", "--permission-mode"} & set(args)
 
 
 def test_exported_values_override_file_and_shell_text_is_literal(launch):
@@ -256,6 +297,7 @@ def test_haiku_skips_old_native_installation_for_newer_cli_on_path(launch):
     homebrew = repo.parent / "homebrew with spaces"
     homebrew.mkdir()
     shutil.copy2(native / "claude", homebrew / "claude")
+    shutil.copy2(native / "claude-help.txt", homebrew / "claude-help.txt")
     (homebrew / "version.txt").write_text("2.1.308 (Claude Code)\n")
     result = run("claude-haiku", """
 LLM_API_KEY=dummy-key
@@ -265,7 +307,7 @@ HAIKU_DEPLOYMENT=claude-haiku-5-5
     assert result.returncode == 0, result.stderr
     child = json.loads(result.stdout)
     assert child["executable"] == str(homebrew / "claude")
-    assert child["args"][2:] == ["--effort", "medium", "-p", "OK"]
+    assert child["args"][2:] == ["--effort", "medium", "--permission-mode", "auto", "-p", "OK"]
     assert "skipped older Claude" in result.stderr
 
 

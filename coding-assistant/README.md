@@ -65,6 +65,18 @@ coding-assistant/bin/opencode-luna
 Ask it to reply with `OK` to check the connection, then use it for the exercises.
 Use these launchers each time you want to connect through the workshop endpoints.
 
+The launchers start in **auto mode**, so the assistant edits files and runs commands
+in this repository without asking you each time:
+
+| Assistant | Auto mode |
+|-----------|-----------|
+| Codex | `--approve-for-me`: commands run in the workspace sandbox; Codex reviews requests to leave it (`--full-auto` on older versions) |
+| Claude Code | `--permission-mode auto` (`acceptEdits` on versions without auto mode) |
+| OpenCode | Edits and commands are allowed by default |
+
+To approve each action yourself, start the launcher with `ASSISTANT_AUTO=0`, for
+example `ASSISTANT_AUTO=0 coding-assistant/bin/codex-luna`.
+
 All launchers start with **medium reasoning effort**. To use a different level
 for one session, pass an explicit override:
 
