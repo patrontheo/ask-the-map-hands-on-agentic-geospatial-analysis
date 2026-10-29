@@ -40,7 +40,7 @@ load_config haiku
 # Clear competing providers and credentials before selecting Microsoft Foundry.
 unset CLAUDE_CODE_USE_BEDROCK CLAUDE_CODE_USE_VERTEX CLAUDE_CODE_USE_MANTLE CLAUDE_CODE_USE_ANTHROPIC_AWS \
       ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN ANTHROPIC_BASE_URL ANTHROPIC_DEFAULT_MODEL \
-      ANTHROPIC_FOUNDRY_AUTH_TOKEN ANTHROPIC_FOUNDRY_RESOURCE
+      ANTHROPIC_FOUNDRY_AUTH_TOKEN ANTHROPIC_FOUNDRY_RESOURCE CLAUDE_CODE_EFFORT_LEVEL
 
 export CLAUDE_CODE_USE_FOUNDRY=1
 export ANTHROPIC_FOUNDRY_BASE_URL="$HAIKU_ANTHROPIC_BASE_URL"
@@ -59,4 +59,8 @@ unset AZURE_FOUNDRY_API_KEY
 cd "$REPO_ROOT"
 # Claude loads saved settings after inheriting this environment. Pin provider
 # selection at CLI scope so a saved Bedrock/Vertex setting cannot take over.
-exec "$CLAUDE_BIN" --settings '{"env":{"CLAUDE_CODE_USE_FOUNDRY":"1","CLAUDE_CODE_USE_BEDROCK":"","CLAUDE_CODE_USE_VERTEX":"","CLAUDE_CODE_USE_MANTLE":"","CLAUDE_CODE_USE_ANTHROPIC_AWS":""}}' "$@"
+# Clear saved effort environment overrides so --effort sets the session level.
+exec "$CLAUDE_BIN" \
+  --settings '{"env":{"CLAUDE_CODE_USE_FOUNDRY":"1","CLAUDE_CODE_USE_BEDROCK":"","CLAUDE_CODE_USE_VERTEX":"","CLAUDE_CODE_USE_MANTLE":"","CLAUDE_CODE_USE_ANTHROPIC_AWS":"","CLAUDE_CODE_EFFORT_LEVEL":""}}' \
+  --effort medium \
+  "$@"

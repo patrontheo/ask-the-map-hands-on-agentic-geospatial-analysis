@@ -18,5 +18,6 @@ cd "$REPO_ROOT"
 exec codex \
   -c 'model_provider="luna"' \
   -c "model_providers.luna={name='Luna (Azure)', base_url='$LUNA_OPENAI_BASE_URL', env_key='AZURE_FOUNDRY_API_KEY', wire_api='responses', requires_openai_auth=false}" \
+  -c 'model_reasoning_effort="medium"' \
   -m "$LUNA_DEPLOYMENT" \
   "$@"

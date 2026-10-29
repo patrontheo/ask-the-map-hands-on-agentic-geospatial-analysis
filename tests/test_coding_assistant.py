@@ -35,13 +35,17 @@ arguments = sys.argv[2:]
 if arguments == ["--version"]:
     print(Path(sys.argv[1]).with_name("version.txt").read_text().strip())
     raise SystemExit(0)
+if arguments == ["--help"] and Path(sys.argv[1]).name == "opencode":
+    print(Path(sys.argv[1]).with_name("opencode-help.txt").read_text())
+    raise SystemExit(0)
 environment = {key: value for key, value in os.environ.items()
-               if key in settings or key.startswith(("FILE_", "ANTHROPIC_", "CLAUDE_"))}
+               if key in settings or key.startswith(("FILE_", "ANTHROPIC_", "CLAUDE_", "OPENCODE_"))}
 print(json.dumps({"args": arguments, "env": environment, "cwd": os.getcwd(), "executable": sys.argv[1]}))
 """
     stub = f'#!/bin/sh\nexec {shlex.quote(sys.executable)} -c {shlex.quote(stub_code)} "$0" "$@"\n'
     (stub_dir / "version.txt").write_text("2.1.308 (Claude Code)\n")
-    for cli in ("codex", "claude"):
+    (stub_dir / "opencode-help.txt").write_text("opencode [project]\n--model string\n")
+    for cli in ("codex", "claude", "opencode"):
         path = stub_dir / cli
         path.write_text(stub)
         path.chmod(0o755)
@@ -52,7 +56,7 @@ print(json.dumps({"args": arguments, "env": environment, "cwd": os.getcwd(), "ex
             (repo / ".env").write_text(config)
         environment = {
             key: value for key, value in os.environ.items()
-            if key not in SETTINGS and not key.startswith(("FILE_", "ANTHROPIC_", "CLAUDE_"))
+            if key not in SETTINGS and not key.startswith(("FILE_", "ANTHROPIC_", "CLAUDE_", "OPENCODE_"))
         }
         environment["PATH"] = f"{stub_dir}:/usr/bin:/bin"
         environment.update(overrides or {})
@@ -76,6 +80,7 @@ LUNA_DEPLOYMENT=luna-test
     child = json.loads(result.stdout)
     assert child["cwd"] == str(repo)
     assert child["args"][-4:] == ["-m", "luna-test", "exec", "Reply with exactly: OK"]
+    assert tomllib.loads(child["args"][5])["model_reasoning_effort"] == "medium"
     provider = tomllib.loads(child["args"][3])["model_providers"]["luna"]
     assert provider["base_url"] == "https://example.invalid/openai/v1"
     assert provider["wire_api"] == "responses"
@@ -83,6 +88,73 @@ LUNA_DEPLOYMENT=luna-test
     assert child["env"][provider["env_key"]] == "dummy key=with equals"
     assert all("dummy key" not in arg for arg in child["args"])
     assert not any(key.startswith("FILE_") for key in child["env"])
+
+
+@pytest.mark.parametrize("interface", ["v1", "v2"])
+def test_opencode_reuses_luna_settings_without_putting_credentials_in_config(launch, interface):
+    run, repo = launch
+    if interface == "v2":
+        (repo.parent / "cli" / "opencode-help.txt").write_text("opencode [directory]\n--standalone\n")
+    result = run("opencode-luna", """
+LLM_BASE_URL=https://example.invalid/openai/v1
+LLM_API_KEY='dummy key="quoted" with equals='
+LUNA_DEPLOYMENT=workshop-deployment
+""", overrides={"OPENCODE_CONFIG_CONTENT": '{"model":"other/model"}'},
+        args=("run", "Reply with exactly: OK"))
+    assert result.returncode == 0, result.stderr
+    child = json.loads(result.stdout)
+    assert child["cwd"] == str(repo)
+    prefix = ["--model", "workshop-luna/luna"] if interface == "v1" else ["--standalone"]
+    assert child["args"] == [*prefix, "run", "Reply with exactly: OK"]
+    raw_config = child["env"]["OPENCODE_CONFIG_CONTENT"]
+    config = json.loads(raw_config)
+    assert config["model"] == "workshop-luna/luna"
+    if interface == "v1":
+        assert config["small_model"] == "workshop-luna/luna"
+        assert config["enabled_providers"] == ["workshop-luna"]
+        provider = config["provider"]["workshop-luna"]
+        assert provider["npm"] == "@ai-sdk/openai"
+        options = provider["options"]
+        model = provider["models"]["luna"]
+        assert model["id"] == "{env:LUNA_DEPLOYMENT}"
+        model_options = model["options"]
+        assert model_options["store"] is False
+    else:
+        assert "--model" not in child["args"]
+        provider = config["providers"]["workshop-luna"]
+        assert provider["package"] == "@opencode/ai/providers/openai/responses"
+        options = provider["settings"]
+        model = provider["models"]["luna"]
+        assert model["modelID"] == "{env:LUNA_DEPLOYMENT}"
+        model_options = model["settings"]
+        assert model["body"]["store"] is False
+        assert config["policies"] == [
+            {"action": "provider.use", "resource": "*", "effect": "deny"},
+            {"action": "provider.use", "resource": "workshop-luna", "effect": "allow"},
+        ]
+    assert options["baseURL"] == "{env:LUNA_OPENAI_BASE_URL}"
+    assert options["apiKey"] == "{env:AZURE_FOUNDRY_API_KEY}"
+    assert child["env"]["LUNA_OPENAI_BASE_URL"] == "https://example.invalid/openai/v1"
+    assert child["env"]["AZURE_FOUNDRY_API_KEY"] == 'dummy key="quoted" with equals='
+    assert child["env"]["LUNA_DEPLOYMENT"] == "workshop-deployment"
+    assert model_options["reasoningEffort"] == "medium"
+    assert all("dummy key" not in value for value in [raw_config, *child["args"]])
+    assert not any(key.startswith("FILE_") for key in child["env"])
+    assert not (repo / "opencode.json").exists()
+
+
+def test_opencode_v2_starts_interactively_without_the_removed_model_flag(launch):
+    run, repo = launch
+    (repo.parent / "cli" / "opencode-help.txt").write_text("opencode [directory]\n--standalone\n")
+    result = run("opencode-luna", """
+LLM_BASE_URL=https://example.invalid/openai/v1
+LLM_API_KEY=dummy-key
+LUNA_DEPLOYMENT=luna-test
+""")
+    assert result.returncode == 0, result.stderr
+    child = json.loads(result.stdout)
+    assert child["args"] == ["--standalone"]
+    assert json.loads(child["env"]["OPENCODE_CONFIG_CONTENT"])["model"] == "workshop-luna/luna"
 
 
 def test_haiku_selects_foundry_and_pins_models(launch):
@@ -98,15 +170,17 @@ HAIKU_DEPLOYMENT=haiku-test
         "ANTHROPIC_BASE_URL": "https://other.invalid",
         "ANTHROPIC_FOUNDRY_AUTH_TOKEN": "dummy-token",
         "ANTHROPIC_FOUNDRY_RESOURCE": "other",
+        "CLAUDE_CODE_EFFORT_LEVEL": "high",
     }, args=("-p", "Reply with exactly: OK"))
     assert result.returncode == 0, result.stderr
     child = json.loads(result.stdout)
     assert child["args"][0] == "--settings"
-    assert child["args"][2:] == ["-p", "Reply with exactly: OK"]
+    assert child["args"][2:] == ["--effort", "medium", "-p", "Reply with exactly: OK"]
     # Claude applies saved settings after the shell environment. CLI settings
     # must also pin the provider to override a saved Bedrock/Vertex selection.
     provider_settings = json.loads(child["args"][1])["env"]
     assert provider_settings["CLAUDE_CODE_USE_FOUNDRY"] == "1"
+    assert provider_settings["CLAUDE_CODE_EFFORT_LEVEL"] == ""
     for key in (
         "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX",
         "CLAUDE_CODE_USE_MANTLE", "CLAUDE_CODE_USE_ANTHROPIC_AWS",
@@ -125,6 +199,7 @@ HAIKU_DEPLOYMENT=haiku-test
     for key in (
         "CLAUDE_CODE_USE_BEDROCK", "ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL",
         "ANTHROPIC_FOUNDRY_AUTH_TOKEN", "ANTHROPIC_FOUNDRY_RESOURCE", "AZURE_FOUNDRY_API_KEY",
+        "CLAUDE_CODE_EFFORT_LEVEL",
     ):
         assert key not in environment
 
@@ -150,6 +225,7 @@ def test_exported_values_override_file_and_shell_text_is_literal(launch):
 
 @pytest.mark.parametrize("script, setting", [
     ("codex-luna", "LUNA_OPENAI_BASE_URL"),
+    ("opencode-luna", "LUNA_OPENAI_BASE_URL"),
     ("claude-haiku", "HAIKU_ANTHROPIC_BASE_URL"),
 ])
 def test_missing_configuration_stops_before_launch_without_exposing_key(launch, script, setting):
@@ -189,7 +265,7 @@ HAIKU_DEPLOYMENT=claude-haiku-5-5
     assert result.returncode == 0, result.stderr
     child = json.loads(result.stdout)
     assert child["executable"] == str(homebrew / "claude")
-    assert child["args"][2:] == ["-p", "OK"]
+    assert child["args"][2:] == ["--effort", "medium", "-p", "OK"]
     assert "skipped older Claude" in result.stderr
 
 
@@ -213,13 +289,13 @@ def test_haiku_version_works_without_credentials_at_minimum_supported_version(la
     assert result.stdout.strip() == "2.1.293 (Claude Code)"
 
 
-@pytest.mark.parametrize("script", ["codex-luna", "claude-haiku"])
+@pytest.mark.parametrize("script", ["codex-luna", "claude-haiku", "opencode-luna"])
 def test_participant_setup_from_current_template(launch, script):
     run, _ = launch
     template = TEMPLATE.read_text()
     defaults = dotenv_values(TEMPLATE, interpolate=False)
     config = template.replace("LLM_API_KEY=", "LLM_API_KEY=dummy-template-key", 1)
-    if script == "codex-luna":
+    if script in ("codex-luna", "opencode-luna"):
         config = config.replace("LLM_BASE_URL=", "LLM_BASE_URL=https://example.invalid/openai/v1", 1)
     else:
         # Haiku doesn't require the app or Luna endpoint to be configured.
@@ -235,14 +311,19 @@ def test_participant_setup_from_current_template(launch, script):
         assert provider["base_url"] == "https://example.invalid/openai/v1"
         assert child["env"][provider["env_key"]] == "dummy-template-key"
         assert child["args"][-1] == defaults["LUNA_DEPLOYMENT"]
+    elif script == "opencode-luna":
+        assert child["env"]["LUNA_OPENAI_BASE_URL"] == "https://example.invalid/openai/v1"
+        assert child["env"]["AZURE_FOUNDRY_API_KEY"] == "dummy-template-key"
+        assert child["env"]["LUNA_DEPLOYMENT"] == defaults["LUNA_DEPLOYMENT"]
     else:
         assert child["env"]["ANTHROPIC_FOUNDRY_API_KEY"] == "dummy-template-key"
         assert child["env"]["ANTHROPIC_MODEL"] == defaults["HAIKU_DEPLOYMENT"]
 
 
-def test_codex_uses_explicit_assistant_endpoint_and_key(launch):
+@pytest.mark.parametrize("script", ["codex-luna", "opencode-luna"])
+def test_luna_launchers_use_explicit_assistant_endpoint_and_key(launch, script):
     run, _ = launch
-    result = run("codex-luna", """
+    result = run(script, """
 LLM_BASE_URL=https://app.invalid/openai/v1
 LLM_API_KEY=dummy-app-key
 AZURE_FOUNDRY_API_KEY=dummy-assistant-key
@@ -251,13 +332,20 @@ LUNA_DEPLOYMENT=assistant-deployment
 """)
     assert result.returncode == 0, result.stderr
     child = json.loads(result.stdout)
-    provider = tomllib.loads(child["args"][3])["model_providers"]["luna"]
-    assert provider["base_url"] == "https://assistant.invalid/openai/v1"
-    assert child["env"][provider["env_key"]] == "dummy-assistant-key"
-    assert child["args"][-1] == "assistant-deployment"
+    if script == "codex-luna":
+        provider = tomllib.loads(child["args"][3])["model_providers"]["luna"]
+        assert provider["base_url"] == "https://assistant.invalid/openai/v1"
+        assert child["env"][provider["env_key"]] == "dummy-assistant-key"
+        assert child["args"][-1] == "assistant-deployment"
+    else:
+        assert child["env"]["LUNA_OPENAI_BASE_URL"] == "https://assistant.invalid/openai/v1"
+        assert child["env"]["AZURE_FOUNDRY_API_KEY"] == "dummy-assistant-key"
+        assert child["env"]["LUNA_DEPLOYMENT"] == "assistant-deployment"
 
 
-@pytest.mark.parametrize("script, cli", [("codex-luna", "codex"), ("claude-haiku", "claude")])
+@pytest.mark.parametrize("script, cli", [
+    ("codex-luna", "codex"), ("claude-haiku", "claude"), ("opencode-luna", "opencode"),
+])
 def test_missing_cli_has_actionable_error(launch, script, cli):
     run, repo = launch
     (repo.parent / "cli" / cli).unlink()
