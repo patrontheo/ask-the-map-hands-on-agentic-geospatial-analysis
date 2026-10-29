@@ -20,6 +20,12 @@ esac
 AUTO_ARGS=()
 if [ "${ASSISTANT_AUTO:-1}" != 0 ]; then
   AUTO_ARGS=(--sandbox workspace-write --ask-for-approval never)
+  # Let `uv run` (tests, the app) use its cache from inside the sandbox.
+  UV_CACHE="$(uv cache dir 2>/dev/null || true)"
+  case "$UV_CACHE" in
+    ""|*\'*|*$'\n'*) ;;
+    *) AUTO_ARGS+=(-c "sandbox_workspace_write.writable_roots=['$UV_CACHE']") ;;
+  esac
 fi
 
 cd "$REPO_ROOT"

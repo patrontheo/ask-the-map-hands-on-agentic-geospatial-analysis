@@ -8,7 +8,9 @@ results remain shared.
 
 1. Ask your coding assistant which calculation tools the app needs to answer the
    three example questions. Ask for small, reusable tools that the app's agent can
-   chain, not one tool per question, and no code yet.
+   chain, not one tool per question, and no code yet. The tools should be built from
+   general table and geometry operations, not by wrapping the ready-made reference
+   functions in `backend/app/analysis.py`.
 2. Review its plan and find at least one thing to correct or make more precise.
    Check the CRS and units, buildings rather than location pins, boundary contact,
    each site counted once, and the full-portfolio denominator. The screening rules
