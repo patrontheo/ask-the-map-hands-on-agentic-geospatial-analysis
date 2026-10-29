@@ -64,6 +64,7 @@ not zero.
 
 Optional ideas that practise more GIS:
 
+- Export the affected sites as GeoJSON, open the file in QGIS and compare it with
+  the app's map. No coding needed for the comparison.
 - Find the sites within 1 km of the burnt area, measuring distance in metres.
 - Measure the burnt area of each commune, in hectares.
-- Export the affected sites as GeoJSON and open them in another tool.
