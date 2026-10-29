@@ -65,8 +65,8 @@ Keep the server running in its terminal. Open a second terminal tab in the same
 repository folder for your coding assistant and commands.
 
 Follow the [coding assistant setup](coding-assistant/README.md) to use
-Codex CLI (Luna) or Claude Code (Haiku) with the workshop endpoints and the
-same `.env` file. No personal subscription is required.
+Codex CLI (Luna), Claude Code (Haiku), or OpenCode (Luna) with the workshop
+endpoints and the same `.env` file. No personal subscription is required.
 
 ## Exercises
 

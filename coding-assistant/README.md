@@ -1,13 +1,17 @@
 # Coding assistant
 
-Use Codex CLI (Luna) or Claude Code (Haiku) with the workshop endpoints.
+Use Codex CLI (Luna), Claude Code (Haiku), or OpenCode (Luna) with the workshop endpoints.
 No personal subscription is required.
 
 ## Setup
 
-Install [Codex CLI](https://developers.openai.com/codex/cli/) or
-[Claude Code](https://code.claude.com/docs/en/setup). Choose one.
+Install [Codex CLI](https://developers.openai.com/codex/cli/),
+[Claude Code](https://code.claude.com/docs/en/setup), or
+[OpenCode](https://opencode.ai/docs/). Choose one.
 Use Bash on macOS/Linux, or WSL on Windows.
+
+Use a current OpenCode release; the launcher was tested with **1.19.5**
+(`opencode --version`).
 
 Haiku 5.5 requires Claude Code **2.1.293 or later**. Check with `claude --version`.
 For a Homebrew installation, update with `brew upgrade --cask claude-code`;
@@ -32,11 +36,12 @@ cp .example.env .env
 ```
 
 Fill in `LLM_API_KEY` and your chosen assistant's settings using the values
-provided by the organisers. The app and both assistants share this key.
+provided by the organisers. The app and coding assistants share this key.
 
 | Assistant | Settings in `.env` |
 |-----------|-------------------|
 | Codex / Luna | `LUNA_DEPLOYMENT` and `LUNA_OPENAI_BASE_URL` |
+| OpenCode / Luna | `LUNA_DEPLOYMENT` and `LUNA_OPENAI_BASE_URL` |
 | Claude Code / Haiku | `HAIKU_DEPLOYMENT` and `HAIKU_ANTHROPIC_BASE_URL` |
 
 For Luna, use a base URL ending in `/openai/v1`, or leave it blank to reuse
@@ -53,10 +58,30 @@ From the repository root, run your chosen assistant:
 coding-assistant/bin/codex-luna
 # Or:
 coding-assistant/bin/claude-haiku
+# Or:
+coding-assistant/bin/opencode-luna
 ```
 
 Ask it to reply with `OK` to check the connection, then use it for the exercises.
 Use these launchers each time you want to connect through the workshop endpoints.
+
+All launchers start with **medium reasoning effort**. To use a different level
+for one session, pass an explicit override:
+
+```bash
+coding-assistant/bin/claude-haiku --effort high
+coding-assistant/bin/codex-luna -c 'model_reasoning_effort="high"'
+coding-assistant/bin/opencode-luna run --variant high "Explain this codebase"
+```
+
+OpenCode reuses the Codex/Luna endpoint and deployment settings and connects via
+the Responses API. The launcher supplies its provider configuration for the
+session; you do not need `/connect` or an `opencode.json` file. To check the
+connection without opening the interactive interface, run:
+
+```bash
+coding-assistant/bin/opencode-luna run "Reply with exactly: OK"
+```
 
 The Haiku launcher selects Microsoft Foundry for its session, including when your
 saved Claude settings select another provider. To check the connection settings,
