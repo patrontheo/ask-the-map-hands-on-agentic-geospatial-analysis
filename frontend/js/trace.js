@@ -3,7 +3,7 @@ import { escapeHtml } from "./format.js";
 const number = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
 const count = new Intl.NumberFormat("en-GB");
 const rate = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 3 });
-const duration = (ms) => ms == null ? "Unavailable" : ms < 1000 ? `${number.format(ms)} ms` : `${number.format(ms / 1000)} s`;
+const duration = (ms) => ms == null ? "—" : ms < 1000 ? `${number.format(ms)} ms` : `${number.format(ms / 1000)} s`;
 const dollars = (value) => value == null ? "Unavailable"
   : value > 0 && value < 0.000001 ? "<$0.000001" : `$${value.toFixed(6)}`;
 const hasCost = (step) => step.cost?.status === "estimated"
@@ -51,17 +51,16 @@ export function buildTrace(response) {
     }
   }
   const modelSteps = steps.filter((step) => step.kind === "model");
-  const sumDuration = (items) => items.some((step) => !Number.isFinite(step.durationMs)) ? null : items.reduce((sum, step) => sum + step.durationMs, 0);
-  const modelMs = sumDuration(modelSteps);
+  const modelMs = modelSteps.reduce((sum, step) => sum + (step.durationMs ?? 0), 0);
   const pricedSteps = modelSteps.filter(hasCost);
   const knownCostUsd = pricedSteps.reduce((sum, step) => sum + step.cost.total_usd, 0);
   const unpricedCalls = modelCalls - pricedSteps.length;
-  const toolMs = sumDuration(steps.filter((step) => step.kind === "tool"));
+  const toolMs = steps.filter((step) => step.kind === "tool").reduce((sum, step) => sum + (step.durationMs ?? 0), 0);
   const elapsed = Date.parse(events.at(-1)?.ts) - Date.parse(events[0]?.ts);
   return { steps, modelCalls, toolCalls: calls.size, inputTokens, outputTokens, modelMs, toolMs,
     knownCostUsd, unpricedCalls, totalCostUsd: modelCalls && !unpricedCalls ? knownCostUsd : null,
     pricing: modelSteps.find((step) => step.cost?.pricing)?.cost.pricing,
-    totalMs: Number.isFinite(elapsed) ? Math.max(0, elapsed) : modelMs == null || toolMs == null ? null : modelMs + toolMs,
+    totalMs: Number.isFinite(elapsed) ? Math.max(0, elapsed) : modelMs + toolMs,
     errors: steps.filter((step) => step.status === "error").length };
 }
 
@@ -75,18 +74,6 @@ function outputPreview(output) {
   if (!output?.table) return output;
   return { ...output, table: { ...output.table, rows: output.table.rows.slice(0, 10) } };
 }
-
-function readableTable(output) {
-  const table = output?.table;
-  if (!table?.rows?.length) return "";
-  const names = table.columns?.map((column) => column.name) ?? Object.keys(table.rows[0]);
-  const priority = ["site_id", "building_id", "company_id", "n_sites", "exposed_tiv_eur", "tiv_eur", "exposure_pct"];
-  const selected = priority.filter((name) => names.includes(name));
-  const columns = (selected.length ? selected : names).slice(0, 5);
-  return `<h3>Returned data</h3><div class="trace-result-table"><table><thead><tr>${columns.map((name) => `<th>${escapeHtml(name)}</th>`).join("")}</tr></thead>
-    <tbody>${table.rows.slice(0, 10).map((row) => `<tr>${columns.map((name) => `<td>${escapeHtml(String(row[name] ?? "Unavailable"))}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
-}
-
 
 function costDetails(step) {
   if (step.kind !== "model") return "";
@@ -137,12 +124,10 @@ function stepHtml(step, index) {
     </summary>
     <div class="trace-step-details">
       ${costDetails(step)}
-      ${step.kind === "tool" ? readableTable(step.output) : ""}${rowsNote}
-      <details class="trace-raw"><summary>${step.kind === "model" ? "Request metadata and response" : "Arguments and raw result"}</summary>
-        <h3>${step.kind === "model" ? "Request metadata" : "Arguments"}</h3>
-        <pre>${escapeHtml(jsonPreview(step.input))}</pre>
-        <h3>Output preview</h3><pre>${escapeHtml(jsonPreview(outputPreview(step.output)))}</pre>
-      </details>
+      <h3>${step.kind === "model" ? "Request metadata" : "Input"}</h3>
+      <pre>${escapeHtml(jsonPreview(step.input))}</pre>
+      <h3>Output preview</h3>
+      <pre>${escapeHtml(jsonPreview(outputPreview(step.output)))}</pre>${rowsNote}
     </div>
   </details></li>`;
 }
@@ -151,7 +136,7 @@ function traceHtml(message, response) {
   const trace = buildTrace(response);
   const context = `<p class="trace-question">${escapeHtml(message)}</p>`;
   if (!trace.steps.length) return `${context}<p class="trace-empty">No execution steps were recorded for this response.</p>`;
-  const timedMs = trace.modelMs == null || trace.toolMs == null ? null : trace.modelMs + trace.toolMs;
+  const timedMs = trace.modelMs + trace.toolMs;
   const modelPercent = timedMs > 0 ? 100 * trace.modelMs / timedMs : 0;
   const tokens = trace.inputTokens || trace.outputTokens
     ? ` · ${count.format(trace.inputTokens)} input / ${count.format(trace.outputTokens)} output tokens` : "";
@@ -182,7 +167,12 @@ export function createTraceButton(message, response) {
   button.setAttribute("aria-label", "View execution trace");
   button.setAttribute("aria-haspopup", "dialog");
   button.setAttribute("aria-controls", "trace-dialog");
-  button.textContent = "Show trace";
+  button.innerHTML = `<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none"
+    stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="5" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="12" r="2"/>
+    <path d="M5 7v10M7 5h3a4 4 0 0 1 4 4v0a3 3 0 0 0 3 3M7 19h3a4 4 0 0 0 4-4v0a3 3 0 0 1 3-3"/>
+  </svg>`;
+  // Each button closes over its own response, including when older messages are reopened.
   button.addEventListener("click", () => {
     const content = document.getElementById("trace-content");
     content.innerHTML = traceHtml(message, response);
