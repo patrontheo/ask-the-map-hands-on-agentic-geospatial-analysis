@@ -76,7 +76,7 @@ endpoints and the same `.env` file. No personal subscription is required.
 | 0 (`main`)          | [Try the baseline](exercises/step-00/README.md)                   |
 | 1 (`step-01-tools`) | [Build calculation tools](exercises/step-01/README.md)            |
 | 2 (`step-02-trace`) | [Build and interpret a trace viewer](exercises/step-02/README.md) |
-| 3                   | Generated analysis and charts (stretch)                           |
+| Stretch goal        | [Optional GIS ideas](exercises/step-02/README.md#stretch-goal)    |
 
 
 
@@ -85,7 +85,7 @@ endpoints and the same `.env` file. No personal subscription is required.
 
 The session lasts two hours: 25 minutes introduction, 10 workshop and baseline demo,
 15 setup and 5 exploring the baseline, 20 for Step 1 (15 coding), 23 for Step 2
-(20 coding), then the final app and closing. Generated analysis is optional.
+(20 coding), then the final app and closing. The stretch goal is optional.
 Install everything beforehand; setup during the session only pulls the latest changes.
 Different coding assistants may produce different tools and interfaces; shared
 geometry rules, selected sites and numeric checks remain the same.
