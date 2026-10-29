@@ -35,12 +35,16 @@ arguments = sys.argv[2:]
 if arguments == ["--version"]:
     print(Path(sys.argv[1]).with_name("version.txt").read_text().strip())
     raise SystemExit(0)
+if arguments == ["--help"] and Path(sys.argv[1]).name == "opencode":
+    print(Path(sys.argv[1]).with_name("opencode-help.txt").read_text())
+    raise SystemExit(0)
 environment = {key: value for key, value in os.environ.items()
                if key in settings or key.startswith(("FILE_", "ANTHROPIC_", "CLAUDE_", "OPENCODE_"))}
 print(json.dumps({"args": arguments, "env": environment, "cwd": os.getcwd(), "executable": sys.argv[1]}))
 """
     stub = f'#!/bin/sh\nexec {shlex.quote(sys.executable)} -c {shlex.quote(stub_code)} "$0" "$@"\n'
     (stub_dir / "version.txt").write_text("2.1.308 (Claude Code)\n")
+    (stub_dir / "opencode-help.txt").write_text("opencode [project]\n--model string\n")
     for cli in ("codex", "claude", "opencode"):
         path = stub_dir / cli
         path.write_text(stub)
@@ -86,8 +90,11 @@ LUNA_DEPLOYMENT=luna-test
     assert not any(key.startswith("FILE_") for key in child["env"])
 
 
-def test_opencode_reuses_luna_settings_without_putting_credentials_in_config(launch):
+@pytest.mark.parametrize("interface", ["v1", "v2"])
+def test_opencode_reuses_luna_settings_without_putting_credentials_in_config(launch, interface):
     run, repo = launch
+    if interface == "v2":
+        (repo.parent / "cli" / "opencode-help.txt").write_text("opencode [directory]\n--standalone\n")
     result = run("opencode-luna", """
 LLM_BASE_URL=https://example.invalid/openai/v1
 LLM_API_KEY='dummy key="quoted" with equals='
@@ -97,25 +104,57 @@ LUNA_DEPLOYMENT=workshop-deployment
     assert result.returncode == 0, result.stderr
     child = json.loads(result.stdout)
     assert child["cwd"] == str(repo)
-    assert child["args"] == ["--model", "workshop-luna/luna", "run", "Reply with exactly: OK"]
+    prefix = ["--model", "workshop-luna/luna"] if interface == "v1" else ["--standalone"]
+    assert child["args"] == [*prefix, "run", "Reply with exactly: OK"]
     raw_config = child["env"]["OPENCODE_CONFIG_CONTENT"]
     config = json.loads(raw_config)
-    assert config["model"] == config["small_model"] == "workshop-luna/luna"
-    assert config["enabled_providers"] == ["workshop-luna"]
-    provider = config["provider"]["workshop-luna"]
-    assert provider["npm"] == "@ai-sdk/openai"
-    assert provider["options"]["baseURL"] == "{env:LUNA_OPENAI_BASE_URL}"
-    assert provider["options"]["apiKey"] == "{env:AZURE_FOUNDRY_API_KEY}"
+    assert config["model"] == "workshop-luna/luna"
+    if interface == "v1":
+        assert config["small_model"] == "workshop-luna/luna"
+        assert config["enabled_providers"] == ["workshop-luna"]
+        provider = config["provider"]["workshop-luna"]
+        assert provider["npm"] == "@ai-sdk/openai"
+        options = provider["options"]
+        model = provider["models"]["luna"]
+        assert model["id"] == "{env:LUNA_DEPLOYMENT}"
+        model_options = model["options"]
+        assert model_options["store"] is False
+    else:
+        assert "--model" not in child["args"]
+        provider = config["providers"]["workshop-luna"]
+        assert provider["package"] == "@opencode/ai/providers/openai/responses"
+        options = provider["settings"]
+        model = provider["models"]["luna"]
+        assert model["modelID"] == "{env:LUNA_DEPLOYMENT}"
+        model_options = model["settings"]
+        assert model["body"]["store"] is False
+        assert config["policies"] == [
+            {"action": "provider.use", "resource": "*", "effect": "deny"},
+            {"action": "provider.use", "resource": "workshop-luna", "effect": "allow"},
+        ]
+    assert options["baseURL"] == "{env:LUNA_OPENAI_BASE_URL}"
+    assert options["apiKey"] == "{env:AZURE_FOUNDRY_API_KEY}"
     assert child["env"]["LUNA_OPENAI_BASE_URL"] == "https://example.invalid/openai/v1"
     assert child["env"]["AZURE_FOUNDRY_API_KEY"] == 'dummy key="quoted" with equals='
-    model = provider["models"]["luna"]
-    assert model["id"] == "{env:LUNA_DEPLOYMENT}"
     assert child["env"]["LUNA_DEPLOYMENT"] == "workshop-deployment"
-    assert model["options"]["reasoningEffort"] == "medium"
-    assert model["options"]["store"] is False
+    assert model_options["reasoningEffort"] == "medium"
     assert all("dummy key" not in value for value in [raw_config, *child["args"]])
     assert not any(key.startswith("FILE_") for key in child["env"])
     assert not (repo / "opencode.json").exists()
+
+
+def test_opencode_v2_starts_interactively_without_the_removed_model_flag(launch):
+    run, repo = launch
+    (repo.parent / "cli" / "opencode-help.txt").write_text("opencode [directory]\n--standalone\n")
+    result = run("opencode-luna", """
+LLM_BASE_URL=https://example.invalid/openai/v1
+LLM_API_KEY=dummy-key
+LUNA_DEPLOYMENT=luna-test
+""")
+    assert result.returncode == 0, result.stderr
+    child = json.loads(result.stdout)
+    assert child["args"] == ["--standalone"]
+    assert json.loads(child["env"]["OPENCODE_CONFIG_CONTENT"])["model"] == "workshop-luna/luna"
 
 
 def test_haiku_selects_foundry_and_pins_models(launch):

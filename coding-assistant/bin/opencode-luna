@@ -5,9 +5,58 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=_load_env.sh
 . "$SCRIPT_DIR/_load_env.sh"
-load_config luna
 
 command -v opencode >/dev/null || { echo "error: opencode CLI not found on PATH; see coding-assistant/README.md" >&2; exit 1; }
+OPENCODE_HELP="$(opencode --help)"
+load_config luna
+
+# OpenCode 2 removed the root --model flag and uses a shared background server.
+# Its private server inherits this launcher's endpoint, key and runtime config.
+if [[ "$OPENCODE_HELP" == *"--standalone"* ]]; then
+  export OPENCODE_CONFIG_CONTENT='{
+    "$schema": "https://opencode.ai/config.json",
+    "model": "workshop-luna/luna",
+    "policies": [
+      {"action": "provider.use", "resource": "*", "effect": "deny"},
+      {"action": "provider.use", "resource": "workshop-luna", "effect": "allow"}
+    ],
+    "providers": {
+      "workshop-luna": {
+        "name": "Luna (Azure workshop)",
+        "env": ["AZURE_FOUNDRY_API_KEY"],
+        "package": "@opencode/ai/providers/openai/responses",
+        "settings": {
+          "baseURL": "{env:LUNA_OPENAI_BASE_URL}",
+          "apiKey": "{env:AZURE_FOUNDRY_API_KEY}"
+        },
+        "models": {
+          "luna": {
+            "modelID": "{env:LUNA_DEPLOYMENT}",
+            "name": "Luna (workshop)",
+            "capabilities": {
+              "tools": true,
+              "reasoning": {"supported": true, "effort": ["low", "medium", "high"]}
+            },
+            "settings": {"reasoningEffort": "medium"},
+            "body": {"store": false},
+            "variants": [
+              {"id": "low", "settings": {"reasoningEffort": "low"}},
+              {"id": "medium", "settings": {"reasoningEffort": "medium"}},
+              {"id": "high", "settings": {"reasoningEffort": "high"}}
+            ]
+          }
+        }
+      }
+    },
+    "agents": {
+      "title": {"model": "workshop-luna/luna#medium"},
+      "summary": {"model": "workshop-luna/luna#medium"},
+      "compaction": {"model": "workshop-luna/luna#medium"}
+    }
+  }'
+  cd "$REPO_ROOT"
+  exec opencode --standalone "$@"
+fi
 
 # OpenCode resolves these environment references in its runtime
 # config. Keep the API key out of command arguments and configuration files.

@@ -10,8 +10,8 @@ Install [Codex CLI](https://developers.openai.com/codex/cli/),
 [OpenCode](https://opencode.ai/docs/). Choose one.
 Use Bash on macOS/Linux, or WSL on Windows.
 
-Use a current OpenCode release; the launcher was tested with **1.19.5**
-(`opencode --version`).
+The launcher supports OpenCode 1 and 2 and was tested with **1.19.5** and
+**2.2.1** (`opencode --version`). It detects the installed command interface.
 
 Haiku 5.5 requires Claude Code **2.1.293 or later**. Check with `claude --version`.
 For a Homebrew installation, update with `brew upgrade --cask claude-code`;
@@ -71,7 +71,10 @@ for one session, pass an explicit override:
 ```bash
 coding-assistant/bin/claude-haiku --effort high
 coding-assistant/bin/codex-luna -c 'model_reasoning_effort="high"'
+# OpenCode 1:
 coding-assistant/bin/opencode-luna run --variant high "Explain this codebase"
+# OpenCode 2:
+coding-assistant/bin/opencode-luna run --model 'workshop-luna/luna#high' "Explain this codebase"
 ```
 
 OpenCode reuses the Codex/Luna endpoint and deployment settings and connects via
@@ -82,6 +85,11 @@ connection without opening the interactive interface, run:
 ```bash
 coding-assistant/bin/opencode-luna run "Reply with exactly: OK"
 ```
+
+OpenCode 2 sessions start with a private server so they receive the launcher's
+endpoint and key, even if a background OpenCode server is already running. The
+launcher selects the model through configuration because OpenCode 2 no longer
+accepts `--model` on its interactive root command.
 
 The Haiku launcher selects Microsoft Foundry for its session, including when your
 saved Claude settings select another provider. To check the connection settings,
