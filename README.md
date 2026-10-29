@@ -9,7 +9,8 @@ This checkpoint includes the calculation tools, trace pane and API cost estimate
 
 ## Setup
 
-Clone the starter branch, then install the dependencies:
+Before the workshop, install Git, Python 3.12 and [uv](https://docs.astral.sh/uv/getting-started/installation/).
+Open a terminal, then clone the starter branch and install the dependencies:
 
 ```bash
 git clone --depth 1 --single-branch --branch main \
@@ -19,7 +20,7 @@ uv sync
 cp .example.env .env
 ```
 
-Fill in `LLM_BASE_URL`, `LLM_API_KEY` and `LLM_MODEL` in `.env` using the values
+Open `.env` in your text editor. Fill in `LLM_BASE_URL`, `LLM_API_KEY` and `LLM_MODEL` in `.env` using the values
 provided by the organisers. Then check your setup and start the app:
 
 ```bash
@@ -35,6 +36,9 @@ It makes no model requests; ask a question in the app to check API access.
 
 ## Coding assistant
 
+Keep the server running in its terminal. Open a second terminal tab in the same
+repository folder for your coding assistant and commands.
+
 Follow the [coding assistant setup](coding-assistant/README.md) to use
 Codex CLI (Luna) or Claude Code (Haiku) with the workshop endpoints and the
 same `.env` file. No personal subscription is required.
@@ -46,11 +50,19 @@ same `.env` file. No personal subscription is required.
 | ------------------- | ----------------------------------------------------------------- |
 | 0 (`main`)          | [Try the baseline](exercises/step-00/README.md)                   |
 | 1 (`step-01-tools`) | [Build calculation tools](exercises/step-01/README.md)            |
-| 2 (`step-02-trace`) | [Add a trace pane and cost tracking](exercises/step-02/README.md) |
+| 2 (`step-02-trace`) | [Build and interpret a trace viewer](exercises/step-02/README.md) |
 | 3                   | Generated analysis and charts (stretch)                           |
 
 
 
+
+## Workshop route
+
+The session lasts two hours, including coding: 25 minutes introduction, 10 baseline,
+40 calculation tools, 10 verification, 25 trace viewer and 10 discussion. Cost
+tracking and generated analysis are optional. Setup should be complete beforehand.
+Different coding assistants may produce different tools and interfaces; shared
+geometry rules, selected sites and numeric checks remain the same.
 
 ## Data
 
