@@ -1,19 +1,12 @@
 # Step 1: build calculation tools
 
-Use your coding assistant in this starter checkout to give the app agent reusable
-geospatial and tabular computation tools. Different implementations are expected.
-The same data and screening rules should produce the same selected sites and totals.
+Build reusable geospatial and tabular tools so the app can answer the three
+questions below. Different implementations are expected; the data, screening
+rules and correct results remain shared.
 
-## Plan before implementation
-
-Give your coding assistant the business questions below and ask it to propose a
-short plan. Review how it selects buildings, keeps distinct site IDs, sums insured
-values and constructs each company's full-portfolio denominator. Then ask it to
-implement the plan. Work from the current files; do not copy checkpoint solutions.
-
-Build the minimum calculation path first. Keep functions reusable rather than
-hard-coding a separate answer for each question. You do not need every operation
-listed below. Read `AGENTS.md` for the existing tool and dataset contracts.
+The operations below are examples, not a required list. Keep tools reusable
+rather than hard-coding an answer for each question. The existing tool and dataset
+contracts are described in `AGENTS.md`.
 
 | Operation | Example using the workshop data |
 | --- | --- |
@@ -26,17 +19,17 @@ listed below. Read `AGENTS.md` for the existing tool and dataset contracts.
 | Sort | Rank companies by exposed euros or percentage |
 | Intersect and measure | Optional: measure burnt commune area in a projected CRS |
 
-Names and tool decomposition are choices. Review the selection and returned data,
-not whether your assistant copied these names. While code runs, inspect its plan,
-identify a building-boundary case, and work out which records belong in a company
-denominator. Ask for help if progress stalls; avoid starting a broad rewrite.
+Tool names and decomposition may differ. Check the selected sites and numbers.
 
-## Restart and verify
+## Verify the results
 
-Save your baseline first. In the terminal running the server, press **Ctrl+C**,
-then run `uv run uvicorn backend.app.main:app --reload --port 8000` again. Wait for
-startup to finish and refresh [the app](http://localhost:8000). A browser refresh
-alone is not a server restart. Use your chosen port if different.
+Save your baseline before refreshing. With the supplied `--reload` command, Python
+changes normally reload the backend automatically. Wait for startup to finish,
+then refresh [the app](http://localhost:8000). Use your chosen port if different.
+
+If the new tools are unavailable or automatic reload fails, press **Ctrl+C** in
+the server terminal and run `uv run uvicorn backend.app.main:app --reload --port 8000`
+again, then refresh the browser. Configuration changes may also require a restart.
 
 Repeat the same questions:
 
@@ -49,7 +42,6 @@ which operation supports the change. Company share uses all company sites as the
 denominator, including those outside the wildfire. One site contributes its full
 TIV once. Building and contents TIV excludes business interruption.
 
-At the facilitator's checkpoint, stop and save progress. If blocked, ask for
-assisted checkpoint recovery after preserving your changes. Do not discard work.
+If blocked, save your work and ask a facilitator for checkpoint recovery.
 
 Continue with [Step 2](../step-02/README.md).
