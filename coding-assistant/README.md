@@ -70,7 +70,7 @@ in this repository without asking you each time:
 
 | Assistant | Auto mode |
 |-----------|-----------|
-| Codex | `--approve-for-me`: commands run in the workspace sandbox; Codex reviews requests to leave it (`--full-auto` on older versions) |
+| Codex | `--sandbox workspace-write --ask-for-approval never`: commands run in the workspace sandbox; anything outside it is refused |
 | Claude Code | `--permission-mode auto` (`acceptEdits` on versions without auto mode) |
 | OpenCode | Edits and commands are allowed by default |
 

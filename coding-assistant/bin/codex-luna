@@ -15,15 +15,11 @@ case "$LUNA_OPENAI_BASE_URL" in
 esac
 
 # Workshop default: no approval prompts. Commands run in the workspace sandbox and
-# requests to leave it go to Codex's automatic review. ASSISTANT_AUTO=0 asks instead.
+# anything outside it is refused at once (Codex's automatic review is unavailable
+# on the workshop endpoint). ASSISTANT_AUTO=0 asks instead.
 AUTO_ARGS=()
 if [ "${ASSISTANT_AUTO:-1}" != 0 ]; then
-  CODEX_HELP="$(codex --help)"
-  if [[ "$CODEX_HELP" == *"--approve-for-me"* ]]; then
-    AUTO_ARGS=(--approve-for-me)
-  elif [[ "$CODEX_HELP" == *"--full-auto"* ]]; then
-    AUTO_ARGS=(--full-auto)
-  fi
+  AUTO_ARGS=(--sandbox workspace-write --ask-for-approval never)
 fi
 
 cd "$REPO_ROOT"
