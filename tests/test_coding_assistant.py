@@ -222,6 +222,23 @@ HAIKU_DEPLOYMENT=haiku-test
     assert args[start:start + 2] == ["--permission-mode", "acceptEdits"]
 
 
+def test_codex_sandbox_can_write_the_uv_cache(launch):
+    run, repo = launch
+    uv = repo.parent / "cli" / "uv"
+    uv.write_text("#!/bin/sh\necho '/home/participant/.cache/uv'\n")
+    uv.chmod(0o755)
+    result = run("codex-luna", """
+LLM_API_KEY=dummy-key
+LLM_BASE_URL=https://example.invalid/openai/v1
+LUNA_DEPLOYMENT=luna-test
+""", args=("exec", "OK"))
+    assert result.returncode == 0, result.stderr
+    args = json.loads(result.stdout)["args"]
+    roots = args[args.index("never") + 2]
+    assert args[args.index("never") + 1] == "-c"
+    assert tomllib.loads(roots)["sandbox_workspace_write"]["writable_roots"] == ["/home/participant/.cache/uv"]
+
+
 @pytest.mark.parametrize("script", ["codex-luna", "claude-haiku"])
 def test_auto_mode_can_be_turned_off(launch, script):
     run, _ = launch
