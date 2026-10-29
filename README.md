@@ -10,7 +10,34 @@ This checkpoint contains the completed Step 1 calculation tools.
 ## Setup
 
 Before the workshop, install Git, Python 3.12 and [uv](https://docs.astral.sh/uv/getting-started/installation/).
-Open a terminal, then clone the starter branch and install the dependencies:
+
+### Install uv
+
+**macOS and Linux**
+
+Run this command in your terminal:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+**Windows**
+
+Run this command in PowerShell:
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+Open a new terminal after installation, then verify:
+
+```bash
+uv --version
+```
+
+### Install the workshop
+
+Clone the starter branch and install the dependencies:
 
 ```bash
 git clone --depth 1 --single-branch --branch main \
