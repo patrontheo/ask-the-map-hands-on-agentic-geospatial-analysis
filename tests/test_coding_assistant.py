@@ -30,11 +30,17 @@ def launch(tmp_path):
     stub_dir.mkdir()
     stub_code = f"settings = {SETTINGS!r}\n" + """
 import json, os, sys
+from pathlib import Path
+arguments = sys.argv[2:]
+if arguments == ["--version"]:
+    print(Path(sys.argv[1]).with_name("version.txt").read_text().strip())
+    raise SystemExit(0)
 environment = {key: value for key, value in os.environ.items()
                if key in settings or key.startswith(("FILE_", "ANTHROPIC_", "CLAUDE_"))}
-print(json.dumps({"args": sys.argv[1:], "env": environment, "cwd": os.getcwd()}))
+print(json.dumps({"args": arguments, "env": environment, "cwd": os.getcwd(), "executable": sys.argv[1]}))
 """
-    stub = f'#!/bin/sh\nexec {shlex.quote(sys.executable)} -c {shlex.quote(stub_code)} "$@"\n'
+    stub = f'#!/bin/sh\nexec {shlex.quote(sys.executable)} -c {shlex.quote(stub_code)} "$0" "$@"\n'
+    (stub_dir / "version.txt").write_text("2.1.308 (Claude Code)\n")
     for cli in ("codex", "claude"):
         path = stub_dir / cli
         path.write_text(stub)
@@ -95,7 +101,18 @@ HAIKU_DEPLOYMENT=haiku-test
     }, args=("-p", "Reply with exactly: OK"))
     assert result.returncode == 0, result.stderr
     child = json.loads(result.stdout)
-    assert child["args"] == ["-p", "Reply with exactly: OK"]
+    assert child["args"][0] == "--settings"
+    assert child["args"][2:] == ["-p", "Reply with exactly: OK"]
+    # Claude applies saved settings after the shell environment. CLI settings
+    # must also pin the provider to override a saved Bedrock/Vertex selection.
+    provider_settings = json.loads(child["args"][1])["env"]
+    assert provider_settings["CLAUDE_CODE_USE_FOUNDRY"] == "1"
+    for key in (
+        "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX",
+        "CLAUDE_CODE_USE_MANTLE", "CLAUDE_CODE_USE_ANTHROPIC_AWS",
+    ):
+        assert provider_settings[key] == ""
+    assert all("dummy-" not in arg for arg in child["args"])
     environment = child["env"]
     assert environment["CLAUDE_CODE_USE_FOUNDRY"] == "1"
     assert environment["ANTHROPIC_FOUNDRY_BASE_URL"] == "https://example.invalid/anthropic"
@@ -154,6 +171,46 @@ def test_exported_configuration_works_without_env_file(launch):
     })
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["env"]["ANTHROPIC_FOUNDRY_API_KEY"] == "dummy-exported-key"
+
+
+def test_haiku_skips_old_native_installation_for_newer_cli_on_path(launch):
+    run, repo = launch
+    native = repo.parent / "cli"
+    (native / "version.txt").write_text("2.1.92 (Claude Code)\n")
+    homebrew = repo.parent / "homebrew with spaces"
+    homebrew.mkdir()
+    shutil.copy2(native / "claude", homebrew / "claude")
+    (homebrew / "version.txt").write_text("2.1.308 (Claude Code)\n")
+    result = run("claude-haiku", """
+LLM_API_KEY=dummy-key
+HAIKU_ANTHROPIC_BASE_URL=https://example.invalid/anthropic
+HAIKU_DEPLOYMENT=claude-haiku-5-5
+""", overrides={"PATH": f"{native}:{homebrew}:/usr/bin:/bin"}, args=("-p", "OK"))
+    assert result.returncode == 0, result.stderr
+    child = json.loads(result.stdout)
+    assert child["executable"] == str(homebrew / "claude")
+    assert child["args"][2:] == ["-p", "OK"]
+    assert "skipped older Claude" in result.stderr
+
+
+@pytest.mark.parametrize("version", ["2.1.92", "2.1.292"])
+def test_haiku_rejects_unsupported_cli_before_loading_configuration(launch, version):
+    run, repo = launch
+    cli = repo.parent / "cli"
+    (cli / "version.txt").write_text(f"{version} (Claude Code)\n")
+    result = run("claude-haiku")
+    assert result.returncode != 0
+    assert not result.stdout
+    assert "2.1.293 or later" in result.stderr
+    assert str(cli / "claude") in result.stderr
+
+
+def test_haiku_version_works_without_credentials_at_minimum_supported_version(launch):
+    run, repo = launch
+    (repo.parent / "cli" / "version.txt").write_text("2.1.293 (Claude Code)\n")
+    result = run("claude-haiku", args=("--version",))
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "2.1.293 (Claude Code)"
 
 
 @pytest.mark.parametrize("script", ["codex-luna", "claude-haiku"])
