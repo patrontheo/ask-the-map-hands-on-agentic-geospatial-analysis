@@ -55,6 +55,17 @@ export ANTHROPIC_DEFAULT_FABLE_MODEL="$HAIKU_DEPLOYMENT"
 export CLAUDE_CODE_SUBAGENT_MODEL="$HAIKU_DEPLOYMENT"
 export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
 
+# Workshop default: auto mode, without a prompt for each action. Older versions
+# without it auto-accept file edits. ASSISTANT_AUTO=0 asks instead.
+AUTO_ARGS=()
+if [ "${ASSISTANT_AUTO:-1}" != 0 ]; then
+  if [[ "$("$CLAUDE_BIN" --help)" == *'"auto"'* ]]; then
+    AUTO_ARGS=(--permission-mode auto)
+  else
+    AUTO_ARGS=(--permission-mode acceptEdits)
+  fi
+fi
+
 unset AZURE_FOUNDRY_API_KEY
 cd "$REPO_ROOT"
 # Claude loads saved settings after inheriting this environment. Pin provider
@@ -63,4 +74,5 @@ cd "$REPO_ROOT"
 exec "$CLAUDE_BIN" \
   --settings '{"env":{"CLAUDE_CODE_USE_FOUNDRY":"1","CLAUDE_CODE_USE_BEDROCK":"","CLAUDE_CODE_USE_VERTEX":"","CLAUDE_CODE_USE_MANTLE":"","CLAUDE_CODE_USE_ANTHROPIC_AWS":"","CLAUDE_CODE_EFFORT_LEVEL":""}}' \
   --effort medium \
+  ${AUTO_ARGS[@]+"${AUTO_ARGS[@]}"} \
   "$@"
