@@ -1,7 +1,7 @@
 import { api } from "./api.js";
 import { escapeHtml, formatEur } from "./format.js";
 
-const COLORS = { flood: "#1e8fd6", wildfire: "#f07c00", other: "#7c3aed", site: "#343c3d", selected: "#ff1721",
+const COLORS = { flood: "#1e8fd6", wildfire: "#f07c00", other: "#5f6b6d", site: "#343c3d", selected: "#ff1721",
   brand: "#00008f", district: "#5f6b6d", building: "#0e9f8e", buildingLine: "#076b5f" };
 // Positron vector basemap from OpenFreeMap: no API key (CARTO's Positron tiles now need one). Its tiles carry
 // their own OpenFreeMap / OpenMapTiles / OpenStreetMap attribution.
@@ -24,6 +24,14 @@ async function basemapStyle() {
 const RANK = { districts: 1, incident: 2, parcels: 3, buildings: 4, sites: 5, line: 6 };
 
 let map;
+let streetLayerIds = [];
+let activeBasemap = "street";
+let streetAvailable = false;
+let satelliteFailures = 0;
+const SATELLITE_SOURCE = "satellite-imagery";
+const SATELLITE_LAYER = "satellite-imagery-layer";
+const SATELLITE_ATTRIBUTION = 'Imagery © <a href="https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9">Esri, Maxar, Earthstar Geographics and the GIS User Community</a>';
+
 let ready;
 const catalog = new Map(); // layer_id -> metadata from /api/layers
 const added = new Map(); // layer_id -> { rank, mapLayerIds, visible }
@@ -47,6 +55,8 @@ export function initMap(container) {
     map.addControl(new maplibregl.ScaleControl({ unit: "metric" }), "bottom-right");
     // MapLibre only re-measures on window resize; the grid layout can change the container size without one.
     new ResizeObserver(() => map.resize()).observe(map.getContainer());
+    streetAvailable = !!basemap;
+    streetLayerIds = basemap ? basemap.layers.filter((l) => l.type !== "background").map((l) => l.id) : [];
     if (basemap) watchBasemap(basemap);
     else showBasemapNotice();
     await new Promise((resolve) => map.on("load", resolve));
@@ -60,13 +70,20 @@ export function initMap(container) {
       attribution.classList.remove("maplibregl-compact-show");
     }
     for (const layer of await api.layers()) catalog.set(layer.id, layer);
+    document.getElementById("layer-key").open = !(globalThis.matchMedia?.("(max-width: 560px)").matches ?? false);
+    document.getElementById("basemap").addEventListener("change", (event) => setBasemap(event.target.value));
+    map.on("error", (event) => {
+      if (activeBasemap !== "satellite" || event.sourceId !== SATELLITE_SOURCE || ++satelliteFailures !== 4) return;
+      map.setLayoutProperty(SATELLITE_LAYER, "visibility", "none");
+      showBasemapNotice("Satellite tiles are unavailable. Choose Street or Data only; portfolio layers remain available.");
+    });
   })();
   return ready;
 }
 
-function showBasemapNotice() {
+function showBasemapNotice(message = "Street tiles are unavailable. Choose Satellite or Data only; portfolio layers remain available.") {
   const el = document.getElementById("map-notice");
-  el.textContent = "Basemap tiles are unavailable from this network. Showing the data layers only.";
+  el.textContent = message;
   el.hidden = false;
 }
 
@@ -76,10 +93,30 @@ function watchBasemap(style) {
   const layerIds = style.layers.filter((l) => l.type !== "background").map((l) => l.id);
   let failures = 0;
   map.on("error", (e) => {
-    if (!sources.has(e.sourceId) || ++failures !== 4) return;
+    if (activeBasemap !== "street" || !sources.has(e.sourceId) || ++failures !== 4) return;
+    streetAvailable = false;
     for (const id of layerIds) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", "none");
     showBasemapNotice();
   });
+}
+
+// Swap only basemap visibility: source data, highlights, camera and tool state survive.
+export function setBasemap(value) {
+  if (!["street", "satellite", "data"].includes(value)) return;
+  activeBasemap = value;
+  document.getElementById("map-notice").hidden = true;
+  for (const id of streetLayerIds) if (map.getLayer(id))
+    map.setLayoutProperty(id, "visibility", value === "street" && streetAvailable ? "visible" : "none");
+  if (value === "satellite" && !map.getLayer(SATELLITE_LAYER)) {
+    map.addSource(SATELLITE_SOURCE, { type: "raster", tileSize: 256, maxzoom: 19,
+      tiles: ["https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+      attribution: SATELLITE_ATTRIBUTION });
+    map.addLayer({ id: SATELLITE_LAYER, type: "raster", source: SATELLITE_SOURCE }, beforeId(0));
+  }
+  if (map.getLayer(SATELLITE_LAYER))
+    map.setLayoutProperty(SATELLITE_LAYER, "visibility", value === "satellite" ? "visible" : "none");
+  satelliteFailures = 0;
+  if (value === "street" && !streetAvailable) showBasemapNotice();
 }
 
 function perilColor(peril) {
@@ -136,6 +173,8 @@ async function loadLayer(layerId) {
   } else if (meta.kind === "parcels" || meta.kind === "buildings") {
     shapeSiteIds.set(layerId, geojson.features.filter((f) => f.geometry).map((f) => f.properties.site_id));
     addMapLayers(layerId, rank, geojson, siteShapeSpecs(meta.kind));
+    addLegendEntry(layerId, meta.kind === "buildings" ? "Buildings" : "Parcels", {
+      color: meta.kind === "buildings" ? COLORS.building : "transparent", shape: meta.kind === "parcels" ? "parcel" : "building" });
   } else if (meta.kind === "incident") {
     const color = perilColor(meta.peril);
     addMapLayers(layerId, rank, geojson, [
@@ -214,6 +253,8 @@ function setVisible(layerId, visible) {
     if (!layer) continue;
     layer.visible = visible;
     for (const mapId of layer.mapLayerIds) map.setLayoutProperty(mapId, "visibility", visible ? "visible" : "none");
+    const entry = legendBoxes.get(id);
+    if (entry) entry.checked = visible;
   }
   updatePointOpacity();
   const box = legendBoxes.get(layerId);
@@ -232,7 +273,7 @@ function addLegendEntry(layerId, text, { color, shape }) {
   box.addEventListener("change", () => (box.checked ? showLayer(layerId) : setVisible(layerId, false)));
   const swatch = document.createElement("span");
   swatch.className = `swatch${shape ? ` ${shape}` : ""}`;
-  if (color === "transparent") swatch.style.border = `1px dashed ${COLORS.district}`;
+  if (color === "transparent") swatch.style.border = `1px ${shape === "parcel" ? "solid" : "dashed"} ${COLORS.district}`;
   else if (color) swatch.style.background = color;
   label.append(box, swatch, document.createTextNode(text));
   legendBoxes.set(layerId, box);

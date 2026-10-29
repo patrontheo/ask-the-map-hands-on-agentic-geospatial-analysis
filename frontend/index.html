@@ -18,7 +18,19 @@
   <main class="layout">
     <section class="map-area" aria-label="Map">
       <div id="map"></div>
-      <div id="legend" class="legend" aria-label="Map layers"></div>
+      <div class="map-key">
+        <label class="basemap-label" for="basemap">Basemap</label>
+        <select id="basemap" aria-describedby="shape-hint">
+          <option value="street">Street</option>
+          <option value="satellite">Satellite</option>
+          <option value="data">Data only</option>
+        </select>
+        <details id="layer-key" open>
+          <summary>Map layers</summary>
+          <div id="legend" class="legend" aria-label="Map layers"></div>
+          <p id="shape-hint">Zoom in for buildings and parcels.</p>
+        </details>
+      </div>
       <div id="map-notice" class="map-notice" role="status" hidden></div>
     </section>
 

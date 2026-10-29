@@ -1,38 +1,56 @@
-# Step 2 — see how the agent answered
+# Step 2: build and interpret a trace viewer
 
-## 1. Build the trace pane
+## Completed trace first
 
-Build a trace viewer for each assistant response. Add a small icon beside the
-response that opens a closable overlay pane showing the execution behind that answer.
+Ask your coding assistant to build a trace viewer attached to each assistant
+response. Use a clearly labelled **Show trace** control that opens a closable pane.
+The backend already returns events and tool results; inspect their contract first.
+The first target is a working viewer for completed answers. Live updates, charts,
+pricing and broad UI redesign are outside the core task.
 
-The pane should show:
+Show a readable sequence containing:
 
-- Model calls and tool calls in execution order, including their status.
-- Time spent in each step, plus the total time and a breakdown of model versus tool time.
-- Expandable step details: inputs, outputs and errors where available, such as
-  tool arguments and result previews.
+- The question, model calls, tool calls and final answer, in recorded order.
+- Tool names with relevant arguments, status, result summaries and returned tables.
+- Available durations, with model and tool time shown separately.
+- Errors and missing information. Missing timing is unavailable, not zero.
 
-Keep trace details out of the answer itself. Clicking an older response should
-show that response's trace, not the most recent one.
+Keep large JSON payloads in expandable details. Pair a tool call and result using
+`call_id`; resolve returned data using `result_id`. Each older answer must open its
+own trace. Keep the question visible. A request event contains metadata, not the
+complete model input. Do not invent private thoughts or explanations of why the
+model chose a tool. Display only recorded information.
 
-The backend already returns trace events and tool results with each answer.
-Showing the completed trace is enough for this exercise; live updates are optional.
+Restart the server as described in Step 1, wait for startup, and refresh the app.
+Save any answers you need before refreshing.
 
-Ask the same questions again and inspect their traces. Which tools did the agent
-use? How did their outputs contribute to the answer? Where was most of the time spent?
+## Run and interpret
 
-## 2. Add cost tracking
+Repeat the questions:
 
-Once the pane works, extend it to show the estimated model API cost:
+1. Which sites lie inside the wildfire footprint, and how many distinct sites is that?
+2. What TIV do these sites represent, and which companies have the highest exposed TIV?
+3. For each company, what share of its full portfolio TIV is inside the footprint?
 
-- The total cost of producing that response at the top of the pane.
-- The individual cost of each model call.
-- A token breakdown: input, output, and cache reads/writes where reported by the API.
+Open one answer's trace. Identify the operation and returned records that establish
+the selection, where distinct sites are counted, and which source supplies the
+full-company denominator. Tool names and call order may differ across pairs.
+A trace makes execution visible; correct-looking calls still need correct data
+and calculations. Compare the answer with the facilitator's reference.
 
-Use the prices for the deployed model, make the pricing assumptions visible, and
-label the figures as estimates. Sum all model calls for the response total, avoiding
-double-counting cached input or reasoning tokens. Missing usage or unknown prices
-should appear as unavailable, not as zero cost.
+Check close/reopen, an older answer, keyboard access and an empty/error trace.
+After these checks pass, stop implementation and spend the remaining time
+interpreting the evidence. If behind at the facilitator checkpoint, save progress
+and ask for recovery help. While code runs, inspect a recorded event and identify
+the field that connects it to its result.
 
-Re-ask the questions and compare costs. Which calls are most expensive? How much
-does caching help? Are the slowest steps also the most expensive?
+## Optional: cost tracking
+
+Only after the core viewer and evidence checks work, add an estimated model cost.
+Use organiser-verified prices for the deployed model, with date, currency and SKU.
+Do not spend the timed exercise researching prices independently.
+
+Show the response total, individual model-call costs and API-reported token usage.
+Avoid double-counting cached input or reasoning tokens already included in output.
+Missing usage or unknown prices must display as unavailable, not zero. Explain any
+cache categories used. Cost tracking is outside the mandatory two-hour route.
