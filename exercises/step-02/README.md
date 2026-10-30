@@ -47,7 +47,9 @@ If blocked, save progress and ask a facilitator for recovery help.
 Add an estimated API cost to the trace. Use these prices; do not research others.
 
 `gpt-6-luna`, Standard tier, USD per million tokens, checked 27 October 2026
-([published prices](https://developers.openai.com/api/docs/models/gpt-6-luna)):
+([published prices](https://developers.openai.com/api/docs/models/gpt-6-luna)).
+The app reports its model as the workshop deployment name (`LLM_MODEL`, for example
+`gpt-6-luna-pat-ws-gis-ams`); that deployment is `gpt-6-luna` and uses these prices.
 
 | Token type          | USD / 1M |
 | ------------------- | -------: |
